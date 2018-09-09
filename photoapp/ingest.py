@@ -55,7 +55,8 @@ def batch_ingest(library, files):
     print("Scanning RAWs")
     # process raws
     for item in chain(*[byext[ext] for ext in files_raw]):
-        itemmeta = Photo(hash=get_hash(item), path=item, format=magic.from_file(item, mime=True))
+        itemmeta = Photo(hash=get_hash(item), path=item, size=os.path.getsize(item),
+                         format=special_magic(item))
         fprefix = os.path.basename(item)[::-1].split(".", 1)[-1][::-1]
         fmatch = "{}.jpg".format(fprefix.lower())
         foundmatch = False
@@ -67,21 +68,28 @@ def batch_ingest(library, files):
                     break
             if foundmatch:
                 break
-
         if not foundmatch:
             photos.append(PhotoSet(date=get_mtime(item), lat=0, lon=0, files=[itemmeta]))
-
         # TODO prune any xmp without an associated regular image or cr2
 
     print("Scanning other files")
     # process all other formats
     for item in chain(*[byext[ext] for ext in files_video]):
-        itemmeta = Photo(hash=get_hash(item), path=item, format=magic.from_file(item, mime=True))
+        itemmeta = Photo(hash=get_hash(item), path=item, size=os.path.getsize(item),
+                         format=special_magic(item))
         photos.append(PhotoSet(date=get_mtime(item), lat=0, lon=0, files=[itemmeta]))
 
     print("Updating database")
     for photoset in photos:
         library.add_photoset(photoset)
+    print("Update complete")
+
+
+def special_magic(fpath):
+    if fpath.split(".")[-1].lower() == "xmp":
+        return "application/octet-stream-xmp"
+    else:
+        return magic.from_file(fpath, mime=True)
 
 
 def main():

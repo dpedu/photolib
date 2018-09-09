@@ -1,0 +1,25 @@
+{% set title = "All photos" %}
+
+{% include "page-top.html" %}
+
+{% set locals = namespace() %}
+
+
+<div class="photo-feed">
+    {% set locals.im_year = 0 %}
+    {% for item in images %}
+        {% if item.date.year != locals.im_year %}
+            {% set locals.im_year = item.date.year %}
+            <div class="feed-divider year"><h4>{{ locals.im_year }}</h4></div>
+        {% endif %}
+        <div class="photo">
+            <a href="/photo/{{ item.uuid }}">
+                <img src="thumb/set/feed/{{ item.uuid }}.jpg" />
+            </a>
+        </div>
+    {% endfor %}
+    <br style="clear:both" />
+    <a href="feed?page={{ page + 1 }}">Next</a>
+</div>
+
+{% include "page-bottom.html" %}

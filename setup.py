@@ -17,6 +17,8 @@ setup(name='photoapp',
       entry_points={
           "console_scripts": [
               "photoappd = photoapp.daemon:main",
-              "photoimport = photoapp.ingest:main"
+              "photoimport = photoapp.ingest:main",
+              "photovalidate = photoapp.validate:main",
+              "photoinfo = photoapp.image:main"
           ]
       })

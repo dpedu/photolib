@@ -1,0 +1,195 @@
+* {
+    box-sizing: border-box;
+}
+
+a {
+    text-decoration: none;
+    color: #1b98f8;
+}
+
+#layout, #nav, #list, #main {
+    margin: 0;
+    padding: 0;
+}
+
+/* make the navigation 100% width on phones */
+#nav {
+    width: 100%;
+    height: 40px;
+    position: relative;
+    background: rgb(37, 42, 58);
+    text-align: center;
+}
+/* show the "Menu" button on phones */
+#nav .nav-menu-button {
+    display: block;
+    top: 0.5em;
+    right: 0.5em;
+    position: absolute;
+}
+
+/* when "Menu" is clicked, the navbar should be 80% height */
+#nav.active {
+    height: 80%;
+}
+/* don't show the navigation items until the "Menu" button is clicked */
+.nav-inner {
+    display: none;
+}
+#nav.active .nav-inner {
+    display: block;
+    padding: 2em 0;
+}
+
+
+#nav .pure-menu {
+    background: transparent;
+    border: none;
+    text-align: left;
+}
+    #nav .pure-menu-link:hover,
+    #nav .pure-menu-link:focus {
+        background: rgb(55, 60, 90);
+    }
+    #nav .pure-menu-link {
+        color: #fff;
+        margin-left: 0.5em;
+    }
+    #nav .pure-menu-heading {
+        border-bottom: none;
+        font-size:110%;
+        color: rgb(75, 113, 151);
+    }
+
+.email-label-personal,
+.email-label-work,
+.email-label-travel {
+    width: 15px;
+    height: 15px;
+    display: inline-block;
+    margin-right: 0.5em;
+    border-radius: 3px;
+}
+.email-label-personal {
+    background: #ffc94c;
+}
+.email-label-work {
+    background: #41ccb4;
+}
+.email-label-travel {
+    background: #40c365;
+}
+
+.email-content {
+    padding: 0em 4em;
+}
+.email-content-header, .email-content-body, .email-content-footer {
+    padding: 1em 0em;
+}
+.email-content-header {
+    border-bottom: 1px solid #ddd;
+}
+.email-content-title {
+    margin: 0.5em 0 0;
+}
+.email-content-subtitle {
+    font-size: 1em;
+    margin: 0;
+    font-weight: normal;
+}
+.email-content-controls {
+    margin-top: 2em;
+    text-align: right;
+}
+.email-content-controls .secondary-button {
+    margin-bottom: 0.3em;
+}
+
+.email-avatar {
+    width: 40px;
+    height: 40px;
+}
+
+
+@media (min-width: 40em) {
+    #layout {
+        padding-left: 300px; /* "left col (nav + list)" width */
+        position: relative;
+    }
+    /* These are position:fixed; elements that will be in the left 500px of the screen */
+    #nav, #list {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        overflow: auto;
+    }
+    #nav {
+        margin-left:-300px; /* "left col (nav + list)" width */
+        width:300px;
+        height: 100%;
+    }
+    .nav-inner {
+        display: block;
+        padding: 2em 0;
+    }
+    #nav .nav-menu-button {
+        display: none;
+    }
+    #main {
+        position: fixed;
+        top: 33%;
+        right: 0;
+        bottom: 0;
+        left: 150px;
+        overflow: auto;
+    }
+}
+
+@media (min-width: 60em) {
+
+    /* This will now take up it's own column, so don't need position: fixed; */
+    #main {
+        position: static;
+        margin: 0;
+        padding: 0;
+    }
+}
+
+
+.photo-feed {
+    .photo {
+        float: left;
+        width: 250px;
+        height: 250px; // matches the "feed" thumb size in library.py
+        overflow: hidden;
+        margin: 0px 20px 20px 0px;
+
+        img {
+            display: block;
+        }
+
+        &:hover {
+            border: 3px solid #252a3a;
+            width: 256px;
+            height: 256px;
+            margin: -3px 17px 17px -3px;
+        }
+    }
+
+    .feed-divider {
+        clear: both;
+        padding: 10px 0px;
+    }
+}
+
+.photo-view {
+    img {
+        display: block;
+        width: 100%;
+        max-height: 100%;
+        box-sizing: border-box;
+    }
+    .photo-info {
+        padding: 0px 0px 0px 25px;
+    }
+}
