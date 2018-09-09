@@ -70,20 +70,32 @@ class PhotoLibrary(object):
         Create a thumbnail of the given photo, scaled/cropped to the given named style
         :return: local path to thumbnail file or None if creation failed or was blocked
         """
-        styles = {"tiny": (80, 80),
-                  "small": (100, 100),
-                  "feed": (250, 250),
-                  "preview": (1024, 768),
-                  "big": (2048, 1536)}
+        # style tuples: max x, max y, rotate ok)
+        # rotate ok means x and y maxes can be swapped if it fits the image's aspect ratio better
+        styles = {"tiny": (80, 80, False),
+                  "small": (100, 100, False),
+                  "feed": (250, 250, False),
+                  "preview": (1024, 768, True),
+                  "big": (2048, 1536, True)}
         dest = os.path.join(self.cache_path, "thumbs", style, "{}.jpg".format(photo.uuid))
         if os.path.exists(dest):
             return os.path.abspath(dest)
         if photo.width is None:  # todo better detection of images that PIL can't open
             return None
         if photo.uuid not in self._failed_thumbs_cache[style]:
-            width = min(styles[style][0], photo.width if photo.width > 0 else 999999999)
-            height = min(styles[style][1], photo.height if photo.height > 0 else 999999999)  # TODO this is bad.
-            p = Process(target=self.gen_thumb, args=(os.path.join(self.path, photo.path), dest, width, height, photo.orientation))
+            thumb_width, thumb_height, flip_ok = styles[style]
+            im_is_rotated = photo.orientation % 2 != 0
+            i_width = photo.width
+            i_height = photo.height
+
+            if im_is_rotated and flip_ok:
+                thumb_width, thumb_height = thumb_height, thumb_width
+
+            thumb_width = min(thumb_width, i_width if i_width > 0 else 999999999)  # TODO do we even have photo.width if PIL can't read the image?
+            thumb_height = min(thumb_height, i_height if i_height > 0 else 999999999)  # TODO this seems bad
+
+            print("thumb final wxh is {}x{}".format(thumb_width, thumb_height))
+            p = Process(target=self.gen_thumb, args=(os.path.join(self.path, photo.path), dest, thumb_width, thumb_height, photo.orientation))
             p.start()
             p.join()
             if p.exitcode != 0:
