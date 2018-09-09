@@ -42,5 +42,5 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-cssmin');
   grunt.loadNpmTasks('grunt-contrib-concat');
 
-  grunt.registerTask('default', ['less:website', 'cssmin:website', 'concat:dist', 'watch']);
+  grunt.registerTask('default', ['less:website', 'cssmin:website', 'concat:dist']);
 };

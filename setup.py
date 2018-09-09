@@ -21,4 +21,8 @@ setup(name='photoapp',
               "photovalidate = photoapp.validate:main",
               "photoinfo = photoapp.image:main"
           ]
-      })
+      },
+      include_package_data=True,
+      package_data={'photoapp': ['../templates/*.html',
+                                 '../styles/dist/*']},
+      zip_safe=False)

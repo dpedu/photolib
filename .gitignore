@@ -1,0 +1,12 @@
+build/
+cache/
+dist/
+dropbox/
+library/
+node_modules/
+photoapp.egg-info/
+photos.db
+styles/css/
+styles/dist/
+styles/mincss/
+testenv/

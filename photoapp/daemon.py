@@ -2,15 +2,19 @@ import os
 import cherrypy
 import logging
 from photoapp.library import PhotoLibrary
-from photoapp.types import Photo, PhotoSet
+from photoapp.types import Photo, PhotoSet, Tag, TagItem
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 
 
+APPROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
+
+
 class PhotosWeb(object):
-    def __init__(self, library):
+    def __init__(self, library, template_dir):
         self.library = library
-        self.tpl = Environment(loader=FileSystemLoader('templates'),
+        self.tpl = Environment(loader=FileSystemLoader(template_dir),
                                autoescape=select_autoescape(['html', 'xml']))
         self.tpl.globals.update(mime2ext=self.mime2ext)
         self.tpl.filters['basename'] = os.path.basename
@@ -92,7 +96,7 @@ class ThumbnailView(object):
         if thumb_path:
             return cherrypy.lib.static.serve_file(thumb_path, "image/jpeg")
         else:
-            return cherrypy.lib.static.serve_file(os.path.abspath("styles/dist/unknown.svg"), "image/svg+xml")
+            return cherrypy.lib.static.serve_file(os.path.join(APPROOT, "styles/dist/unknown.svg"), "image/svg+xml")
 
 
 @cherrypy.popargs('item_type', 'uuid')
@@ -153,7 +157,9 @@ def main():
 
     library = PhotoLibrary(args.database_path, args.library)
 
-    web = PhotosWeb(library)
+    tpl_dir = os.path.join(APPROOT, "templates") if not args.debug else "templates"
+
+    web = PhotosWeb(library, tpl_dir)
     web_config = {}
 
     # TODO make auth work again
@@ -170,7 +176,7 @@ def main():
 
     cherrypy.tree.mount(web, '/', {'/': web_config,
                                    '/static': {"tools.staticdir.on": True,
-                                               "tools.staticdir.dir": os.path.abspath("./styles/dist")}})
+                                               "tools.staticdir.dir": os.path.join(APPROOT, "styles/dist") if not args.debug else os.path.abspath("styles/dist")}})
 
     cherrypy.config.update({
         # 'sessionFilter.on': True,
