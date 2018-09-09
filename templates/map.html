@@ -1,0 +1,33 @@
+{% set title = "Photo map" %}
+{% set subtitle = "GPS data" %}
+
+{% include "page-top.html" %}
+
+<div class="photo-map">
+    <div id="mapdiv" style="height: 900px"></div>
+    <script src="http://www.openlayers.org/api/OpenLayers.js"></script>
+    <script>
+        <!-- https://wiki.openstreetmap.org/wiki/OpenLayers_Marker_Example -->
+        var points = [
+            {%- for item in images %}
+            [{{item.lon}}, {{item.lat}}],
+            {%- endfor %}
+        ]
+        var map = new OpenLayers.Map("mapdiv");
+        map.addLayer(new OpenLayers.Layer.OSM());
+        var markers = new OpenLayers.Layer.Markers( "Markers" );
+        for(var i=0;i<points.length;i++) {
+            var point = points[i]
+            var lonLat = new OpenLayers.LonLat(point[0], point[1])
+                .transform(new OpenLayers.Projection("EPSG:4326"),
+                           map.getProjectionObject());
+            var marker = new OpenLayers.Marker(lonLat)
+            markers.addMarker(marker);
+        }
+        map.addLayer(markers);
+        var zoom={{ zoom or 3 }};
+        map.setCenter(lonLat, zoom);
+    </script>
+</div>
+
+{% include "page-bottom.html" %}

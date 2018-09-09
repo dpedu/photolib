@@ -11,7 +11,7 @@ def get_jpg_info(fpath):
     """
     Given the path to a jpg, return a dict describing it
     """
-    date, gps, dimensions = get_exif_data(fpath)
+    date, gps, dimensions, orientation = get_exif_data(fpath)
 
     if date is None:
         import pdb
@@ -24,7 +24,8 @@ def get_jpg_info(fpath):
     mime = magic.from_file(fpath, mime=True)
     size = os.path.getsize(fpath)
 
-    photo = Photo(hash=get_hash(fpath), path=fpath, format=mime, size=size, width=dimensions[0], height=dimensions[1])
+    photo = Photo(hash=get_hash(fpath), path=fpath, format=mime, size=size,
+                  width=dimensions[0], height=dimensions[1], orientation=orientation)
     return PhotoSet(date=date, lat=lat, lon=lon, files=[photo])
 
 
@@ -45,13 +46,14 @@ def get_hash(path):
 
 def get_exif_data(path):
     """
-    Return a (datetime, (decimal, decimal)) tuple describing the photo's exif date and gps coordinates
+    Return a (datetime, (decimal, decimal), (width, height), rotation) tuple describing the photo's exif date and gps coordinates
     """
     img = Image.open(path)
 
     datestr = None
     gpsinfo = None
     dateinfo = None
+    orientationinfo = 0
     sizeinfo = (img.width, img.height)
 
     if img.format in ["JPEG", "PNG", "GIF"]:
@@ -74,6 +76,10 @@ def get_exif_data(path):
                     raise Exception("{} has no DateTime".format(path))  # TODO how often do we hit this
                 dateinfo = datetime.strptime(datestr, "%Y:%m:%d %H:%M:%S")
 
+                orien = exif.get("Orientation")
+                if orien:
+                    orientationinfo = {0: 0, 8: 1, 3: 2, 6: 3}.get(int(orien), 0)
+
                 gps = exif.get("GPSInfo")
                 if gps:
                     # see https://gis.stackexchange.com/a/273402
@@ -84,16 +90,11 @@ def get_exif_data(path):
                     if gps[3] == 'W':
                         gps_x *= -1
                     gpsinfo = (gps_y, gps_x)
-                import pdb
-                pdb.set_trace()
-                pass
-                pass
-                pass
 
     if dateinfo is None:
         dateinfo = get_mtime(path)
 
-    return dateinfo, gpsinfo, sizeinfo
+    return dateinfo, gpsinfo, sizeinfo, orientationinfo
 
 
 def rational64u_to_hms(values):

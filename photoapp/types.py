@@ -32,6 +32,7 @@ class Photo(Base):
     size = Column(Integer)
     width = Column(Integer)
     height = Column(Integer)
+    orientation = Column(Integer, default=0)
     hash = Column(String(length=64), unique=True)
     path = Column(Unicode)
     format = Column(String(length=64))  # TODO how long can a mime string be

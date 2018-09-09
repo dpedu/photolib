@@ -13,6 +13,7 @@ class PhotosWeb(object):
         self.tpl = Environment(loader=FileSystemLoader('templates'),
                                autoescape=select_autoescape(['html', 'xml']))
         self.tpl.globals.update(mime2ext=self.mime2ext)
+        self.tpl.filters['basename'] = os.path.basename
         self.thumb = ThumbnailView(self)
         self.photo = PhotoView(self)
         self.download = DownloadView(self)
@@ -50,6 +51,14 @@ class PhotosWeb(object):
 
         yield self.tpl.get_template("monthly.html").render(images=images)
 
+    @cherrypy.expose
+    def map(self, i=None, zoom=3):
+        s = self.session()
+        query = s.query(PhotoSet).filter(PhotoSet.lat != 0, PhotoSet.lon != 0)
+        if i:
+            query = query.filter(PhotoSet.uuid == i)
+        yield self.tpl.get_template("map.html").render(images=query.all(), zoom=int(zoom))
+
 
 @cherrypy.popargs('item_type', 'thumb_size', 'uuid')
 class ThumbnailView(object):
@@ -81,9 +90,9 @@ class ThumbnailView(object):
         # TODO some lock around calls to this based on uuid
         thumb_path = self.master.library.make_thumb(thumb_from, thumb_size)
         if thumb_path:
-            return cherrypy.lib.static.serve_file(thumb_path, 'image/jpeg')
+            return cherrypy.lib.static.serve_file(thumb_path, "image/jpeg")
         else:
-            return "No thumbnail available"  # TODO generic svg icon
+            return cherrypy.lib.static.serve_file(os.path.abspath("styles/dist/unknown.svg"), "image/svg+xml")
 
 
 @cherrypy.popargs('item_type', 'uuid')
@@ -164,17 +173,17 @@ def main():
                                                "tools.staticdir.dir": os.path.abspath("./styles/dist")}})
 
     cherrypy.config.update({
-        'sessionFilter.on': True,
-        'tools.sessions.on': True,
-        'tools.sessions.locking': 'explicit',
-        'tools.sessions.timeout': 525600,
-        'tools.gzip.on': True,
+        # 'sessionFilter.on': True,
+        # 'tools.sessions.on': True,
+        # 'tools.sessions.locking': 'explicit',
+        # 'tools.sessions.timeout': 525600,
+        # 'tools.gzip.on': True,
         'request.show_tracebacks': True,
         'server.socket_port': args.port,
         'server.thread_pool': 25,
         'server.socket_host': '0.0.0.0',
         'server.show_tracebacks': True,
-        'server.socket_timeout': 5,
+        # 'server.socket_timeout': 5,
         'log.screen': False,
         'engine.autoreload.on': args.debug
     })

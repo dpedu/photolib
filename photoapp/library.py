@@ -70,16 +70,20 @@ class PhotoLibrary(object):
         Create a thumbnail of the given photo, scaled/cropped to the given named style
         :return: local path to thumbnail file or None if creation failed or was blocked
         """
-        styles = {"feed": (250, 250),
+        styles = {"tiny": (80, 80),
+                  "small": (100, 100),
+                  "feed": (250, 250),
                   "preview": (1024, 768),
                   "big": (2048, 1536)}
         dest = os.path.join(self.cache_path, "thumbs", style, "{}.jpg".format(photo.uuid))
         if os.path.exists(dest):
             return os.path.abspath(dest)
+        if photo.width is None:  # todo better detection of images that PIL can't open
+            return None
         if photo.uuid not in self._failed_thumbs_cache[style]:
             width = min(styles[style][0], photo.width if photo.width > 0 else 999999999)
             height = min(styles[style][1], photo.height if photo.height > 0 else 999999999)  # TODO this is bad.
-            p = Process(target=self.gen_thumb, args=(os.path.join(self.path, photo.path), dest, width, height))
+            p = Process(target=self.gen_thumb, args=(os.path.join(self.path, photo.path), dest, width, height, photo.orientation))
             p.start()
             p.join()
             if p.exitcode != 0:
@@ -89,13 +93,13 @@ class PhotoLibrary(object):
         return None
 
     @staticmethod
-    def gen_thumb(src_img, dest_img, width, height):
+    def gen_thumb(src_img, dest_img, width, height, rotation):
         try:
             start = time()
             # TODO lock around the dir creation
             os.makedirs(os.path.split(dest_img)[0], exist_ok=True)
-
             image = Image.open(src_img)
+            image = image.rotate(90 * rotation, expand=True)
             thumb = ImageOps.fit(image, (width, height), Image.ANTIALIAS)
             thumb.save(dest_img, 'JPEG')
             print("Generated {} in {}s".format(dest_img, round(time() - start, 4)))
