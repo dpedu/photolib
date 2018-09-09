@@ -2,9 +2,12 @@
     box-sizing: border-box;
 }
 
+
+@linkcolor: #1b98f8;
+
 a {
     text-decoration: none;
-    color: #1b98f8;
+    color: @linkcolor;
 }
 
 #layout, #nav, #list, #main {
@@ -202,6 +205,37 @@ a {
         img {
             // float: left;
             max-width: 100px;
+        }
+    }
+    .photo-tags {
+        h2 a {
+            font-weight: normal;
+            font-size: 14px;
+        }
+    }
+}
+
+.photo-tagging {
+    img {
+        float: left;
+        padding: 0px 20px 20px 0px;
+    }
+}
+
+.tags-picker {
+    ul {
+
+    }
+    li {
+        display: inline-block;
+        padding-right: 15px;
+    }
+    input.submit-link {
+        border: 0;
+        background: none;
+        color: @linkcolor;
+        &:hover {
+            text-decoration: underline;
         }
     }
 }

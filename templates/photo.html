@@ -36,13 +36,31 @@
                             {{ img.path | basename }}
                         </div>
                         <div>
-                            {{ img.size | filesizeformat }} - {{ img.format }}
+                            {{ img.size | filesizeformat }} - {{ img.width }} x {{ img.height }}
+                        </div>
+                        {% if img.orientation > 0 %}
+                        <div>
+                            Rotation: {{ img.orientation * 90 }}&deg;
+                        </div>
+                        {% endif %}
+                        <div>
+                            {{ img.format }}
                         </div>
                         <div>
                             <a href="/download/one/{{ img.uuid }}">download</a>
                             <a href="/download/one/{{ img.uuid }}.{{ mime2ext(img.format) }}?preview=true">preview</a>
                         </div>
                     </div>
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+        <div class="photo-tags">
+            <h2>Tags <a href="/photo/{{ image.uuid }}/tag">add</a></h2>
+            <ul class="tags-picker">
+            {% for tagi in image.tags %}
+                <li>
+                    <a href="/tags/{{ tagi.tag.uuid }}">{{ tagi.tag.title }}</a>
                 </li>
             {% endfor %}
             </ul>

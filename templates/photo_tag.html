@@ -1,0 +1,43 @@
+{% set title = "Placeholder Title" %}
+{% set subtitle = image.uuid %}
+
+{% include "page-top.html" %}
+
+
+<div class="photo-tagging pure-g">
+    <div class="current-tags pure-u-1-3">
+        <h2>Current Tags</h2>
+        <a href="/photo/{{ image.uuid }}">
+            <img src="/thumb/set/small/{{ image.uuid }}.jpg" />
+        </a>
+        <ul class="tags-picker">
+        {% for tagi in image.tags %}
+            <li>
+                <a href="/tags/{{ tagi.tag.uuid }}">{{ tagi.tag.title }}</a>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+    <div class="all-tags pure-u-1-3">
+        <h2>All tags</h2>
+        <ul class="tags-picker">
+        {% for tag in alltags %}
+            <li>
+                <form action="/photo/{{ image.uuid }}/tag_add" method="post">
+                    <input type="hidden" name="tag" value="{{ tag.uuid }}" />
+                    <input class="submit-link" type="submit" value="{{ tag.title }}" />
+                </form>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+    <div class="add-tags pure-u-1-3">
+        <h2>Add tag</h2>
+        <form action="/photo/{{ image.uuid }}/tag_create" method="post" class="pure-form">
+            <input type="text" name="tag" placeholder="new tag name" />
+            <input type="submit" value="Add" class="pure-button pure-button-primary" />
+        </form>
+    </div>
+</div>
+
+{% include "page-bottom.html" %}

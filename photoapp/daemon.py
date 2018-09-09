@@ -138,6 +138,36 @@ class PhotoView(object):
 
         # yield "viewing {}".format(uuid)
 
+    @cherrypy.expose
+    def tag(self, uuid):
+        s = self.master.session()
+        photo = s.query(PhotoSet).filter(PhotoSet.uuid == uuid).first()
+        alltags = s.query(Tag).order_by(Tag.title).all()
+        yield self.master.tpl.get_template("photo_tag.html").render(image=photo, alltags=alltags)
+
+    @cherrypy.expose
+    def tag_create(self, uuid, tag):
+        # TODO validate uuid ?
+        s = self.master.session()
+        s.add(Tag(title=tag))  # TODO slug
+        # TODO generate slug now or in model?
+        s.commit()
+        raise cherrypy.HTTPRedirect('/photo/{}/tag'.format(uuid), 302)
+
+    @cherrypy.expose
+    def tag_add(self, uuid, tag):
+        # TODO validate uuid ?
+        # TODO validate tag ?
+        s = self.master.session()
+        tag = s.query(Tag).filter(Tag.uuid == tag).first()
+        item = s.query(PhotoSet).filter(PhotoSet.uuid == uuid).first()
+        s.add(TagItem(tag_id=tag.id, set_id=item.id))
+        try:
+            s.commit()
+        except IntegrityError:  # tag already applied
+            pass
+        raise cherrypy.HTTPRedirect('/photo/{}/tag'.format(uuid), 302)
+
 
 def main():
     import argparse
