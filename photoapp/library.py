@@ -84,9 +84,9 @@ class PhotoLibrary(object):
             return None
         if photo.uuid not in self._failed_thumbs_cache[style]:
             thumb_width, thumb_height, flip_ok = styles[style]
-            im_is_rotated = photo.orientation % 2 != 0
             i_width = photo.width
             i_height = photo.height
+            im_is_rotated = photo.orientation % 2 != 0 or i_height > i_width
 
             if im_is_rotated and flip_ok:
                 thumb_width, thumb_height = thumb_height, thumb_width

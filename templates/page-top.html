@@ -22,9 +22,9 @@
                         <li class="pure-menu-item"><a href="/albums" class="pure-menu-link">Foo</a></li>
                         <li class="pure-menu-item"><a href="/albums" class="pure-menu-link">Bar</a></li>
                         <li class="pure-menu-heading">Tags</li>
-                        <li class="pure-menu-item"><a href="/tag/personal" class="pure-menu-link"><span class="email-label-personal"></span>Personal</a></li>
-                        <li class="pure-menu-item"><a href="/tag/work" class="pure-menu-link"><span class="email-label-work"></span>Work</a></li>
-                        <li class="pure-menu-item"><a href="/tag/travel" class="pure-menu-link"><span class="email-label-travel"></span>Travel</a></li>
+                        {% for tag in all_tags %}
+                            <li class="pure-menu-item"><a href="/tag/{{ tag.uuid }}" class="pure-menu-link"><span class="tag-icon tag-icon-mod-3-{{ tag.id % 3 }}"></span>{{ tag.title }}</a></li>
+                        {% endfor %}
                     </ul>
                 </div>
             </div>

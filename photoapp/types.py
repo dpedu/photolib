@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Unicode, DECIMAL, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Unicode, DECIMAL, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
@@ -50,6 +50,7 @@ class Tag(Base):
     uuid = Column(Unicode, unique=True, default=lambda: str(uuid.uuid4()))
     created = Column(DateTime, default=lambda: datetime.now())
     modified = Column(DateTime, default=lambda: datetime.now())
+    is_album = Column(Boolean)
     title = Column(String, unique=True)
     slug = Column(String, unique=True)
     description = Column(String)

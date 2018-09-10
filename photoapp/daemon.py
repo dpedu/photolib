@@ -22,6 +22,16 @@ class PhotosWeb(object):
         self.photo = PhotoView(self)
         self.download = DownloadView(self)
 
+    def render(self, template, **kwargs):
+        return self.tpl.get_template(template).render(**kwargs, **self.get_default_vars())
+
+    def get_default_vars(self):
+        s = self.session()
+        ret = {
+            "all_tags": s.query(Tag).order_by(Tag.title).all()
+        }
+        return ret
+
     def session(self):
         return self.library.session()
 
@@ -43,7 +53,7 @@ class PhotosWeb(object):
         s = self.session()
         page, pgsize = int(page), int(pgsize)
         images = s.query(PhotoSet).order_by(PhotoSet.date.desc()).offset(pgsize * page).limit(pgsize).all()
-        yield self.tpl.get_template("feed.html").render(images=[i for i in images], page=page)
+        yield self.render("feed.html", images=[i for i in images], page=page)
 
     @cherrypy.expose
     def monthly(self):
@@ -53,7 +63,7 @@ class PhotosWeb(object):
                          func.strftime('%m', PhotoSet.date).label('month')). \
             group_by('year', 'month').order_by('year', 'month').all()
 
-        yield self.tpl.get_template("monthly.html").render(images=images)
+        yield self.render("monthly.html", images=images)
 
     @cherrypy.expose
     def map(self, i=None, zoom=3):
@@ -61,7 +71,7 @@ class PhotosWeb(object):
         query = s.query(PhotoSet).filter(PhotoSet.lat != 0, PhotoSet.lon != 0)
         if i:
             query = query.filter(PhotoSet.uuid == i)
-        yield self.tpl.get_template("map.html").render(images=query.all(), zoom=int(zoom))
+        yield self.render("map.html", images=query.all(), zoom=int(zoom))
 
 
 @cherrypy.popargs('item_type', 'thumb_size', 'uuid')
@@ -134,7 +144,7 @@ class PhotoView(object):
         s = self.master.session()
         photo = s.query(PhotoSet).filter(PhotoSet.uuid == uuid).first()
 
-        yield self.master.tpl.get_template("photo.html").render(image=photo)
+        yield self.master.render("photo.html", image=photo)
 
         # yield "viewing {}".format(uuid)
 
@@ -143,7 +153,7 @@ class PhotoView(object):
         s = self.master.session()
         photo = s.query(PhotoSet).filter(PhotoSet.uuid == uuid).first()
         alltags = s.query(Tag).order_by(Tag.title).all()
-        yield self.master.tpl.get_template("photo_tag.html").render(image=photo, alltags=alltags)
+        yield self.master.render("photo_tag.html", image=photo, alltags=alltags)
 
     @cherrypy.expose
     def tag_create(self, uuid, tag):
