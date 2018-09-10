@@ -5,6 +5,7 @@
 
 {% set locals = namespace() %}
 
+{% set total_pages = (total_sets/pgsize)|ceil %}
 
 <div class="photo-feed">
     {% set locals.im_date = "" %}
@@ -21,7 +22,28 @@
         </div>
     {% endfor %}
     <br style="clear:both" />
-    {% if page > 0 %}<a href="feed?page={{ page - 1 }}">Previous</a> {% endif %}<a href="feed?page={{ page + 1 }}">Next</a>
+    <div class="pager">
+        <h6>Page</h6>
+        {% if page > 0 %}
+        <div class="nav-prev">
+            <a href="feed?page={{ page - 1 }}">Previous</a>
+        </div>
+        {% endif %}
+        <div class="pages">
+            <ul class="pager">
+            {% for pgnum in range(0, total_pages) %}
+                <li{% if pgnum == page %} class="current"{% endif %}>
+                    <a href="/feed?page={{ pgnum }}">{{ pgnum }}</a>
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+        {% if page + 1 < total_pages %}
+        <div class="nav-next">
+            <a href="feed?page={{ page + 1 }}">Next</a>
+        </div>
+        {% endif %}
+    </div>
 </div>
 
 {% include "page-bottom.html" %}

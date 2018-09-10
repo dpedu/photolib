@@ -6,6 +6,7 @@ from photoapp.types import Photo, PhotoSet, Tag, TagItem
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
+import math
 
 
 APPROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
@@ -18,6 +19,7 @@ class PhotosWeb(object):
                                autoescape=select_autoescape(['html', 'xml']))
         self.tpl.globals.update(mime2ext=self.mime2ext)
         self.tpl.filters['basename'] = os.path.basename
+        self.tpl.filters['ceil'] = math.ceil
         self.thumb = ThumbnailView(self)
         self.photo = PhotoView(self)
         self.download = DownloadView(self)
@@ -52,8 +54,9 @@ class PhotosWeb(object):
     def feed(self, page=0, pgsize=25):
         s = self.session()
         page, pgsize = int(page), int(pgsize)
+        total_sets = s.query(func.count(PhotoSet.id)).first()[0]
         images = s.query(PhotoSet).order_by(PhotoSet.date.desc()).offset(pgsize * page).limit(pgsize).all()
-        yield self.render("feed.html", images=[i for i in images], page=page)
+        yield self.render("feed.html", images=[i for i in images], page=page, pgsize=int(pgsize), total_sets=total_sets)
 
     @cherrypy.expose
     def monthly(self):

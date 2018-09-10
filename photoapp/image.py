@@ -71,17 +71,15 @@ def get_exif_data(path):
                         datestr = exif[key]
                         continue
 
-                if datestr is None:
-                    print(exif.keys())
-                    raise Exception("{} has no DateTime".format(path))  # TODO how often do we hit this
-                dateinfo = datetime.strptime(datestr, "%Y:%m:%d %H:%M:%S")
+                if datestr is not None:
+                    dateinfo = datetime.strptime(datestr, "%Y:%m:%d %H:%M:%S")
 
                 orien = exif.get("Orientation")
                 if orien:
                     orientationinfo = {0: 0, 8: 1, 3: 2, 6: 3}.get(int(orien), 0)
 
                 gps = exif.get("GPSInfo")
-                if gps:
+                if gps and 1 in gps and 2 in gps and 3 in gps and 4 in gps:
                     # see https://gis.stackexchange.com/a/273402
                     gps_y = round(hms_to_decimal(rational64u_to_hms(gps[2])), 8)
                     gps_x = round(hms_to_decimal(rational64u_to_hms(gps[4])), 8)

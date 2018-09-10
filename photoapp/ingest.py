@@ -1,5 +1,6 @@
 import magic
 import argparse
+import traceback
 from photoapp.library import PhotoLibrary
 from photoapp.image import get_jpg_info, get_hash, get_mtime
 from itertools import chain
@@ -25,11 +26,16 @@ files_raw = ["cr2", "xmp"]
 files_video = ["mp4", "mov"]
 
 
+def pprogress(done, total=None):
+    print("  complete: {}{}\r".format(done, " / {} ".format(total) if total else ''), end='')
+
+
 def batch_ingest(library, files):
     # group by extension
     byext = {k: [] for k in known_extensions}
 
-    print("processing {} items".format(len(files)))
+    total = len(files)
+    print("processing {} items".format(total))
     print("Pre-sorting files")
     for item in files:
         if not os.path.isfile(item):
@@ -52,9 +58,11 @@ def batch_ingest(library, files):
     # process regular images first.
     for item in chain(*[byext[ext] for ext in regular_images]):
         photos.append(get_jpg_info(item))
+        pprogress(len(photos), total)
 
-    print("Scanning RAWs")
+    print("\nScanning RAWs")
     # process raws
+    done = len(photos)
     for item in chain(*[byext[ext] for ext in files_raw]):
         itemmeta = Photo(hash=get_hash(item), path=item, size=os.path.getsize(item),
                          format=special_magic(item))
@@ -66,24 +74,38 @@ def batch_ingest(library, files):
                 if os.path.basename(fmt.path).lower() == fmatch:
                     foundmatch = True
                     photo.files.append(itemmeta)
+                    done += 1
+                    pprogress(done, total)
                     break
             if foundmatch:
                 break
         if not foundmatch:
             photos.append(PhotoSet(date=get_mtime(item), lat=0, lon=0, files=[itemmeta]))
+            done += 1
+            pprogress(done, total)
         # TODO prune any xmp without an associated regular image or cr2
 
-    print("Scanning other files")
+    print("\nScanning other files")
     # process all other formats
     for item in chain(*[byext[ext] for ext in files_video]):
         itemmeta = Photo(hash=get_hash(item), path=item, size=os.path.getsize(item),
                          format=special_magic(item))
         photos.append(PhotoSet(date=get_mtime(item), lat=0, lon=0, files=[itemmeta]))
+        done += 1
+        pprogress(done, total)
 
-    print("Updating database")
+    print("\nUpdating database")
+    done = 0
+    total = len(photos)
     for photoset in photos:
-        library.add_photoset(photoset)
-    print("Update complete")
+        try:
+            library.add_photoset(photoset)
+            pprogress(done, total)
+            done += 1
+        except:
+            traceback.print_exc()
+            pass
+    print("\nUpdate complete")
 
 
 def special_magic(fpath):
