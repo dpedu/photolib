@@ -36,7 +36,7 @@
                             {{ img.path | basename }}
                         </div>
                         <div>
-                            {{ img.size | filesizeformat }} - {{ img.width }} x {{ img.height }}
+                            {{ img.size | filesizeformat }}{% if img.width %} - {{ img.width }} x {{ img.height }}{% endif %}
                         </div>
                         {% if img.orientation > 0 %}
                         <div>

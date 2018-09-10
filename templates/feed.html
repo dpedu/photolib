@@ -7,11 +7,12 @@
 
 
 <div class="photo-feed">
-    {% set locals.im_year = 0 %}
+    {% set locals.im_date = "" %}
     {% for item in images %}
-        {% if item.date.year != locals.im_year %}
-            {% set locals.im_year = item.date.year %}
-            <div class="feed-divider year"><h4>{{ locals.im_year }}</h4></div>
+        {% set newdate = item.date.strftime("%b %d, %Y") %}
+        {% if newdate != locals.im_date %}
+            {% set locals.im_date = newdate %}
+            <div class="feed-divider year"><h4>{{ locals.im_date }}</h4></div>
         {% endif %}
         <div class="photo">
             <a href="/photo/{{ item.uuid }}">
@@ -20,7 +21,7 @@
         </div>
     {% endfor %}
     <br style="clear:both" />
-    <a href="feed?page={{ page + 1 }}">Next</a>
+    {% if page > 0 %}<a href="feed?page={{ page - 1 }}">Previous</a> {% endif %}<a href="feed?page={{ page + 1 }}">Next</a>
 </div>
 
 {% include "page-bottom.html" %}

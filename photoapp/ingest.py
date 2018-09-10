@@ -29,6 +29,7 @@ def batch_ingest(library, files):
     # group by extension
     byext = {k: [] for k in known_extensions}
 
+    print("processing {} items".format(len(files)))
     print("Pre-sorting files")
     for item in files:
         if not os.path.isfile(item):

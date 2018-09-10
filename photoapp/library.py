@@ -94,7 +94,6 @@ class PhotoLibrary(object):
             thumb_width = min(thumb_width, i_width if i_width > 0 else 999999999)  # TODO do we even have photo.width if PIL can't read the image?
             thumb_height = min(thumb_height, i_height if i_height > 0 else 999999999)  # TODO this seems bad
 
-            print("thumb final wxh is {}x{}".format(thumb_width, thumb_height))
             p = Process(target=self.gen_thumb, args=(os.path.join(self.path, photo.path), dest, thumb_width, thumb_height, photo.orientation))
             p.start()
             p.join()
