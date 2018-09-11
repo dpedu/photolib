@@ -71,8 +71,12 @@ def get_exif_data(path):
                         datestr = exif[key]
                         continue
 
-                if datestr is not None:
-                    dateinfo = datetime.strptime(datestr, "%Y:%m:%d %H:%M:%S")
+                if datestr:
+                    if not datestr.startswith("0000"):  # Weed out some known bad cases
+                        try:
+                            dateinfo = datetime.strptime(datestr, "%Y:%m:%d %H:%M:%S")
+                        except ValueError:
+                            dateinfo = datetime.strptime(datestr, "%Y:%m:%d:%H:%M:%S")
 
                 orien = exif.get("Orientation")
                 if orien:

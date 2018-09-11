@@ -3,23 +3,32 @@
 
 {% include "page-top.html" %}
 
-<table class="pure-table pure-table-bordered">
-    <thead>
-        <tr>
-            <th>year</th>
-            <th>month</th>
-            <th>count</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for row in images %}
+{% set locals = namespace() %}
+
+{% set locals.total_images = 0 %}
+
+<div>
+    <table class="pure-table pure-table-bordered">
+        <thead>
             <tr>
-                <td>{{row[1]}}</td>
-                <td>{{row[2]}}</td>
-                <td>{{row[0]}}</td>
+                <th>year</th>
+                <th>month</th>
+                <th>count</th>
             </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            {% for row in images %}
+                <tr>
+                    <td>{{row[1]}}</td>
+                    <td>{{row[2]}}</td>
+                    <td>{{"{:,}".format(row[0])}}{% set locals.total_images = locals.total_images + row[0]|int %}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <p>{{ "{:,}".format(locals.total_images) }} Files - {{ tsize | filesizeformat }}</p>
+
+</div>
 
 {% include "page-bottom.html" %}

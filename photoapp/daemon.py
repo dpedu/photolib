@@ -4,6 +4,7 @@ import logging
 from photoapp.library import PhotoLibrary
 from photoapp.types import Photo, PhotoSet, Tag, TagItem
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from sqlalchemy import desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 import math
@@ -64,9 +65,9 @@ class PhotosWeb(object):
         images = s.query(func.count(PhotoSet.uuid),
                          func.strftime('%Y', PhotoSet.date).label('year'),
                          func.strftime('%m', PhotoSet.date).label('month')). \
-            group_by('year', 'month').order_by('year', 'month').all()
-
-        yield self.render("monthly.html", images=images)
+            group_by('year', 'month').order_by(desc('year'), desc('month')).all()
+        tsize = s.query(func.sum(Photo.size)).scalar()
+        yield self.render("monthly.html", images=images, tsize=tsize)
 
     @cherrypy.expose
     def map(self, i=None, zoom=3):
