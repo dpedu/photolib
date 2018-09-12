@@ -1,4 +1,4 @@
-{% set title = "All photos" %}
+{% set title = "Photos by date" %}
 {% set subtitle = "By date, descending" %}
 
 {% include "page-top.html" %}
@@ -17,7 +17,7 @@
         {% endif %}
         <div class="photo">
             <a href="/photo/{{ item.uuid }}">
-                <img src="thumb/set/feed/{{ item.uuid }}.jpg" />
+                <img src="/thumb/set/feed/{{ item.uuid }}.jpg" />
             </a>
         </div>
     {% endfor %}
@@ -26,21 +26,21 @@
         <h6>Page</h6>
         {% if page > 0 %}
         <div class="nav-prev">
-            <a href="feed?page={{ page - 1 }}">Previous</a>
+            <a href="{{path}}?page={{ page - 1 }}">Previous</a>
         </div>
         {% endif %}
         <div class="pages">
             <ul class="pager">
             {% for pgnum in range(0, total_pages) %}
                 <li{% if pgnum == page %} class="current"{% endif %}>
-                    <a href="/feed?page={{ pgnum }}">{{ pgnum }}</a>
+                    <a href="{{path}}?page={{ pgnum }}">{{ pgnum }}</a>
                 </li>
             {% endfor %}
             </ul>
         </div>
         {% if page + 1 < total_pages %}
         <div class="nav-next">
-            <a href="feed?page={{ page + 1 }}">Next</a>
+            <a href="{{path}}?page={{ page + 1 }}">Next</a>
         </div>
         {% endif %}
     </div>

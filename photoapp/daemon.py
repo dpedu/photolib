@@ -1,16 +1,22 @@
 import os
 import cherrypy
 import logging
+from datetime import datetime, timedelta
 from photoapp.library import PhotoLibrary
 from photoapp.types import Photo, PhotoSet, Tag, TagItem
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import desc
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
+from sqlalchemy import func, and_
 import math
 
 
 APPROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
+
+
+def tplglobals():
+    print("###", cherrypy.request.path_info)
+    return dict(path=cherrypy.request.path_info)
 
 
 class PhotosWeb(object):
@@ -24,6 +30,7 @@ class PhotosWeb(object):
         self.thumb = ThumbnailView(self)
         self.photo = PhotoView(self)
         self.download = DownloadView(self)
+        self.date = DateView(self)
 
     def render(self, template, **kwargs):
         return self.tpl.get_template(template).render(**kwargs, **self.get_default_vars())
@@ -45,7 +52,8 @@ class PhotosWeb(object):
                 "image/gif": "gif",
                 "application/octet-stream-xmp": "xmp",
                 "image/x-canon-cr2": "cr2",
-                "video/mp4": "mp4"}[mime]
+                "video/mp4": "mp4",
+                "video/quicktime": "mov"}[mime]
 
     @cherrypy.expose
     def index(self):
@@ -57,7 +65,7 @@ class PhotosWeb(object):
         page, pgsize = int(page), int(pgsize)
         total_sets = s.query(func.count(PhotoSet.id)).first()[0]
         images = s.query(PhotoSet).order_by(PhotoSet.date.desc()).offset(pgsize * page).limit(pgsize).all()
-        yield self.render("feed.html", images=[i for i in images], page=page, pgsize=int(pgsize), total_sets=total_sets)
+        yield self.render("feed.html", images=[i for i in images], page=page, pgsize=int(pgsize), total_sets=total_sets, **tplglobals())
 
     @cherrypy.expose
     def monthly(self):
@@ -76,6 +84,37 @@ class PhotosWeb(object):
         if i:
             query = query.filter(PhotoSet.uuid == i)
         yield self.render("map.html", images=query.all(), zoom=int(zoom))
+
+
+@cherrypy.popargs('date')
+class DateView(object):
+    def __init__(self, master):
+        self.master = master
+
+    @cherrypy.expose
+    def index(self, date=None, page=0):
+        s = self.master.session()
+        if date:
+            page = int(page)
+            pgsize = 100
+            dt = datetime.strptime(date, "%Y-%m-%d")
+            dt_end = dt + timedelta(days=1)
+            total_sets = s.query(func.count(PhotoSet.id)). \
+                filter(and_(PhotoSet.date >= dt, PhotoSet.date < dt_end)).first()[0]
+            images = s.query(PhotoSet).filter(and_(PhotoSet.date >= dt,
+                                                   PhotoSet.date < dt_end)).order_by(PhotoSet.date). \
+                offset(page * pgsize).limit(pgsize).all()
+            yield self.master.render("feed.html", page=page, pgsize=pgsize, total_sets=total_sets,
+                                     images=[i for i in images], **tplglobals())
+            return
+        images = s.query(PhotoSet, func.strftime('%Y-%m-%d',
+                         PhotoSet.date).label('gdate'),
+                         func.count('photos.id'),
+                         func.strftime('%Y', PhotoSet.date).label('year'),
+                         func.strftime('%m', PhotoSet.date).label('month'),
+                         func.strftime('%d', PhotoSet.date).label('day')). \
+            group_by('gdate').order_by(desc('year'), 'month', 'day').all()
+        yield self.master.render("dates.html", images=images)
 
 
 @cherrypy.popargs('item_type', 'thumb_size', 'uuid')

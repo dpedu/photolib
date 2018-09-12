@@ -1,0 +1,24 @@
+{% set title = "All photos" %}
+{% set subtitle = "By date, descending" %}
+
+{% include "page-top.html" %}
+
+{% set locals = namespace() %}
+
+<div class="date-feed">
+    {% set locals.year = "" %}
+    {% set locals.month = "" %}
+    {% for item, date, count, _, _, _ in images %}
+        {% if item.date.year != locals.year %}
+            {% set locals.year = item.date.year %}
+            <div class="feed-divider year"><h4>{{ item.date.year }}</h4></div>
+        {% endif %}
+        {% if item.date.month != locals.month %}
+            {% set locals.month = item.date.month %}
+            <div class="feed-divider month"><h4>{{ item.date.strftime("%B") }}</h4></div>
+        {% endif %}
+        <a class="date-item{% if count > 50 %} many{% endif %}" href="/date/{{ date }}">{{ date }} ({{ count }})</a>
+    {% endfor %}
+</div>
+
+{% include "page-bottom.html" %}
