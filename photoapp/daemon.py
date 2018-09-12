@@ -230,7 +230,8 @@ def main():
 
     parser.add_argument('-p', '--port', default=8080, type=int, help="tcp port to listen on")
     parser.add_argument('-l', '--library', default="./library", help="library path")
-    parser.add_argument('-s', '--database-path', default="./photos.db", help="path to persistent sqlite database")
+    parser.add_argument('-c', '--cache', default="./cache", help="cache path")
+    parser.add_argument('-s', '--database', default="./photos.db", help="path to persistent sqlite database")
     parser.add_argument('--debug', action="store_true", help="enable development options")
 
     args = parser.parse_args()
@@ -238,7 +239,7 @@ def main():
     logging.basicConfig(level=logging.INFO if args.debug else logging.WARNING,
                         format="%(asctime)-15s %(levelname)-8s %(filename)s:%(lineno)d %(message)s")
 
-    library = PhotoLibrary(args.database_path, args.library)
+    library = PhotoLibrary(args.database, args.library, args.cache)
 
     tpl_dir = os.path.join(APPROOT, "templates") if not args.debug else "templates"
 

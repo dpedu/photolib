@@ -13,9 +13,9 @@ from PIL import Image, ImageOps
 
 
 class PhotoLibrary(object):
-    def __init__(self, db_path, lib_path):
+    def __init__(self, db_path, lib_path, cache_path):
         self.path = lib_path
-        self.cache_path = "./cache"  # TODO param
+        self.cache_path = cache_path
         self.engine = create_engine('sqlite:///{}'.format(db_path),
                                     connect_args={'check_same_thread': False}, poolclass=StaticPool, echo=False)
         Base.metadata.create_all(self.engine)
