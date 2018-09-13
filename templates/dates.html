@@ -1,7 +1,12 @@
+{% extends "page.html" %}
 {% set title = "All photos" %}
 {% set subtitle = "By date, descending" %}
 
-{% include "page-top.html" %}
+{% block buttons %}
+    xxx
+{% endblock %}
+
+{% block body %}
 
 {% set locals = namespace() %}
 
@@ -21,4 +26,4 @@
     {% endfor %}
 </div>
 
-{% include "page-bottom.html" %}
+{% endblock %}

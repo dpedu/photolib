@@ -24,7 +24,7 @@
                         <li class="pure-menu-item"><a href="/albums" class="pure-menu-link">Bar</a></li>
                         <li class="pure-menu-heading">Tags</li>
                         {% for tag in all_tags %}
-                            <li class="pure-menu-item"><a href="/tag/{{ tag.uuid }}" class="pure-menu-link"><span class="tag-icon tag-icon-mod-3-{{ tag.id % 3 }}"></span>{{ tag.title }}</a></li>
+                            <li class="pure-menu-item"><a href="/tag/{{ tag.uuid }}" class="pure-menu-link"><span class="tag-icon tag-icon-mod-6-{{ tag.id % 6 }}"></span>{{ tag.title }}</a></li>
                         {% endfor %}
                     </ul>
                 </div>
@@ -40,9 +40,18 @@
                         </p>
                     </div>
                     <div class="email-content-controls pure-u-1-2">
+                    {% block buttons %}
                         <button class="secondary-button pure-button">420</button>
                         <button class="secondary-button pure-button">Blaze</button>
                         <button class="secondary-button pure-button">It</button>
+                    {% endblock %}
                     </div>
                 </div>
                 <div class="email-content-body">
+                    {% block body %}default body{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

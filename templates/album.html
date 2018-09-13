@@ -9,8 +9,7 @@
 {% block body %}
 
 {% set locals = namespace() %}
-
-{% set total_pages = (total_sets/pgsize)|ceil %}
+{% set total_pages = (total_items/pgsize)|ceil %}
 
 <div class="photo-feed">
     {% set locals.im_date = "" %}
@@ -52,3 +51,4 @@
 </div>
 
 {% endblock %}
+

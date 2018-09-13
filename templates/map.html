@@ -1,7 +1,12 @@
+{% extends "page.html" %}
 {% set title = "Photo map" %}
 {% set subtitle = "GPS data" %}
 
-{% include "page-top.html" %}
+{% block buttons %}
+    xxx
+{% endblock %}
+
+{% block body %}
 
 <div class="photo-map">
     <div id="mapdiv" style="height: 900px"></div>
@@ -30,4 +35,4 @@
     </script>
 </div>
 
-{% include "page-bottom.html" %}
+{% endblock %}
