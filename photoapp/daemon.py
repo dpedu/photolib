@@ -14,11 +14,6 @@ import math
 APPROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
 
 
-def tplglobals():
-    print("###", cherrypy.request.path_info)
-    return dict(path=cherrypy.request.path_info)
-
-
 class PhotosWeb(object):
     def __init__(self, library, template_dir):
         self.library = library
@@ -85,9 +80,47 @@ class PhotosWeb(object):
             query = query.filter(PhotoSet.uuid == i)
         yield self.render("map.html", images=query.all(), zoom=int(zoom))
 
+    @cherrypy.expose
+    def create_tags(self, fromdate=None, tag=None, newtag=None):
+        """
+        Tag multiple items addressable in one of a couple ways
+        TODO move this somewhere better?
+        """
+        s = self.session()
+        photos = None
+        num_photos = None
+        if fromdate:
+            dt = datetime.strptime(fromdate, "%Y-%m-%d")
+            dt_end = dt + timedelta(days=1)
+            photos = s.query(PhotoSet).filter(and_(PhotoSet.date >= dt,
+                                                   PhotoSet.date < dt_end)).order_by(PhotoSet.date)
+            num_photos = s.query(func.count(PhotoSet.id)). \
+                filter(and_(PhotoSet.date >= dt, PhotoSet.date < dt_end)).order_by(PhotoSet.date).scalar()
+
+        if newtag:
+                # TODO validate uuid ?
+                s.add(Tag(title=newtag))  # TODO slug
+                # TODO generate slug now or in model?
+                s.commit()
+                # raise cherrypy.HTTPRedirect('/photo/{}/tag'.format(uuid), 302)
+
+        if tag:  # Create the tag on all the photos
+            tag = s.query(Tag).filter(Tag.uuid == tag).first()
+            for photo in photos.all():
+                if 0 == s.query(func.count(TagItem.id)).filter(TagItem.tag_id == tag.id,
+                                                               TagItem.set_id == photo.id).scalar():
+                    s.add(TagItem(tag_id=tag.id, set_id=photo.id))
+            s.commit()
+
+        alltags = s.query(Tag).order_by(Tag.title).all()
+        yield self.render("create_tags.html", images=photos, alltags=alltags, num_photos=num_photos, fromdate=fromdate)
+
 
 @cherrypy.popargs('date')
 class DateView(object):
+    """
+    View all the photos shot on a given date
+    """
     def __init__(self, master):
         self.master = master
 
@@ -220,6 +253,39 @@ class PhotoView(object):
         except IntegrityError:  # tag already applied
             pass
         raise cherrypy.HTTPRedirect('/photo/{}/tag'.format(uuid), 302)
+
+
+@cherrypy.popargs('uuid')
+class TagView(object):
+    """
+    View the photos associated with a single tag
+    """
+    def __init__(self, master):
+        self.master = master
+        # self._cp_config = {"tools.trailing_slash.on": False}
+
+    @cherrypy.expose
+    def index(self, uuid, page=0):
+        page = int(page)
+        pgsize = 100
+        s = self.master.session()
+        tag = s.query(Tag).filter(Tag.uuid == uuid).first()
+        numphotos = s.query(func.count(Tag.id)).join(TagItem).join(PhotoSet).filter(Tag.uuid == uuid).scalar()
+        photos = s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.uuid == uuid).offset(page * pgsize).limit(pgsize).all()
+        yield self.master.render("album.html", tag=tag, images=photos, total_items=numphotos, pgsize=100, page=page)
+
+    @cherrypy.expose
+    def op(self, uuid, op):
+        s = self.master.session()
+        tag = s.query(Tag).filter(Tag.uuid == uuid).first()
+        if op == "Demote to tag":
+            tag.is_album = 0
+        elif op == "Promote to album":
+            tag.is_album = 1
+        else:
+            raise Exception("Invalid op")
+        s.commit()
+        raise cherrypy.HTTPRedirect('/tag/{}'.format(tag.uuid), 302)
 
 
 def main():
