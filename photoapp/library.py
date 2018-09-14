@@ -17,7 +17,7 @@ class PhotoLibrary(object):
         self.path = lib_path
         self.cache_path = cache_path
         self.engine = create_engine('sqlite:///{}'.format(db_path),
-                                    connect_args={'check_same_thread': False}, poolclass=StaticPool, echo=False)
+                                    connect_args={'check_same_thread': False}, poolclass=StaticPool)
         Base.metadata.create_all(self.engine)
         self.session = sessionmaker()
         self.session.configure(bind=self.engine)

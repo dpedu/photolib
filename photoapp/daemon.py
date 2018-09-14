@@ -26,6 +26,8 @@ class PhotosWeb(object):
         self.photo = PhotoView(self)
         self.download = DownloadView(self)
         self.date = DateView(self)
+        self.tag = TagView(self)
+        self.album = self.tag
 
     def render(self, template, **kwargs):
         return self.tpl.get_template(template).render(**kwargs, **self.get_default_vars())
@@ -33,7 +35,9 @@ class PhotosWeb(object):
     def get_default_vars(self):
         s = self.session()
         ret = {
-            "all_tags": s.query(Tag).order_by(Tag.title).all()
+            "all_tags": s.query(Tag).order_by(Tag.title).all(),
+            "all_albums": s.query(Tag).filter(Tag.is_album == True).order_by(Tag.title).all(),
+            "path": cherrypy.request.path_info
         }
         return ret
 
@@ -60,7 +64,7 @@ class PhotosWeb(object):
         page, pgsize = int(page), int(pgsize)
         total_sets = s.query(func.count(PhotoSet.id)).first()[0]
         images = s.query(PhotoSet).order_by(PhotoSet.date.desc()).offset(pgsize * page).limit(pgsize).all()
-        yield self.render("feed.html", images=[i for i in images], page=page, pgsize=int(pgsize), total_sets=total_sets, **tplglobals())
+        yield self.render("feed.html", images=[i for i in images], page=page, pgsize=int(pgsize), total_sets=total_sets)
 
     @cherrypy.expose
     def monthly(self):
@@ -137,8 +141,8 @@ class DateView(object):
             images = s.query(PhotoSet).filter(and_(PhotoSet.date >= dt,
                                                    PhotoSet.date < dt_end)).order_by(PhotoSet.date). \
                 offset(page * pgsize).limit(pgsize).all()
-            yield self.master.render("feed.html", page=page, pgsize=pgsize, total_sets=total_sets,
-                                     images=[i for i in images], **tplglobals())
+            yield self.master.render("date.html", page=page, pgsize=pgsize, total_sets=total_sets,
+                                     images=[i for i in images], date=dt)
             return
         images = s.query(PhotoSet, func.strftime('%Y-%m-%d',
                          PhotoSet.date).label('gdate'),
@@ -148,6 +152,17 @@ class DateView(object):
                          func.strftime('%d', PhotoSet.date).label('day')). \
             group_by('gdate').order_by(desc('year'), 'month', 'day').all()
         yield self.master.render("dates.html", images=images)
+
+    @cherrypy.expose
+    def tag(self, date):
+        raise Exception("Who am i")
+        s = self.master.session()
+        dt = datetime.strptime(date, "%Y-%m-%d")
+        dt_end = dt + timedelta(days=1)
+        photos = s.query(PhotoSet).filter(and_(PhotoSet.date >= dt,
+                                               PhotoSet.date < dt_end)).order_by(PhotoSet.date).all()
+        alltags = s.query(Tag).order_by(Tag.title).all()
+        yield self.master.render("create_tags.html", images=photos, alltags=alltags)
 
 
 @cherrypy.popargs('item_type', 'thumb_size', 'uuid')

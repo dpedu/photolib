@@ -20,8 +20,9 @@
                         <li class="pure-menu-item"><a href="/map" class="pure-menu-link">Map</a></li>
                         <li class="pure-menu-item"><a href="/admin/trash" class="pure-menu-link">Trash</a></li>
                         <li class="pure-menu-heading">Albums</li>
-                        <li class="pure-menu-item"><a href="/albums" class="pure-menu-link">Foo</a></li>
-                        <li class="pure-menu-item"><a href="/albums" class="pure-menu-link">Bar</a></li>
+                        {% for tag in all_albums %}
+                            <li class="pure-menu-item"><a href="/album/{{ tag.uuid }}" class="pure-menu-link"><span class="tag-icon tag-icon-mod-6-{{ tag.id % 6 }}"></span>{{ tag.title }}</a></li>
+                        {% endfor %}
                         <li class="pure-menu-heading">Tags</li>
                         {% for tag in all_tags %}
                             <li class="pure-menu-item"><a href="/tag/{{ tag.uuid }}" class="pure-menu-link"><span class="tag-icon tag-icon-mod-6-{{ tag.id % 6 }}"></span>{{ tag.title }}</a></li>

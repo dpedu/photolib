@@ -1,19 +1,21 @@
 {% extends "page.html" %}
-{% set title = "Photos by date" %}
+{% set title = "Photos on {}".format(date.strftime("%b %d, %Y")) %}
 {% set subtitle = "By date, descending" %}
 
 {% block buttons %}
-    <form action="/tag/{{ tag.uuid }}/op" method="post">
-        {% if tag.is_album %}<input type="submit" class="secondary-button pure-button" name="op" value="Demote to tag" />{% else %}
-        <input type="submit" class="secondary-button pure-button" name="op" value="Promote to album" />{% endif %}
-        <input type="submit" class="secondary-button pure-button" name="op" value="Delete tag" />
+    <form action="/create_tags" method="post">
+        <input type="hidden" name="fromdate" value="{{ date.strftime("%Y-%m-%d") }}">
+        <input type="submit" class="secondary-button pure-button" value="Tag all" />
     </form>
 {% endblock %}
+
+
 
 {% block body %}
 
 {% set locals = namespace() %}
-{% set total_pages = (total_items/pgsize)|ceil %}
+
+{% set total_pages = (total_sets/pgsize)|ceil %}
 
 <div class="photo-feed">
     {% set locals.im_date = "" %}
