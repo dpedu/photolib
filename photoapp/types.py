@@ -1,12 +1,19 @@
-from sqlalchemy import Column, Integer, String, DateTime, Unicode, DECIMAL, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Unicode, DECIMAL, ForeignKey, Boolean, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 import uuid
+import enum
 
 
 Base = declarative_base()
+
+
+class PhotoStatus(enum.Enum):
+    private = 0
+    public = 1
+    hidden = 2
 
 
 class PhotoSet(Base):
@@ -15,6 +22,8 @@ class PhotoSet(Base):
     id = Column(Integer, primary_key=True)
     uuid = Column(Unicode, unique=True, default=lambda: str(uuid.uuid4()))
     date = Column(DateTime)
+    date_real = Column(DateTime)
+    date_offset = Column(Integer, default=0)  # minutes
     lat = Column(DECIMAL(precision=11))
     lon = Column(DECIMAL(precision=11))
 
@@ -23,6 +32,8 @@ class PhotoSet(Base):
 
     title = Column(String)
     description = Column(String)
+
+    status = Column(Enum(PhotoStatus), default=PhotoStatus.private)
 
 
 class Photo(Base):

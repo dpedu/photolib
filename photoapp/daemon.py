@@ -286,7 +286,7 @@ class TagView(object):
         s = self.master.session()
         tag = s.query(Tag).filter(Tag.uuid == uuid).first()
         numphotos = s.query(func.count(Tag.id)).join(TagItem).join(PhotoSet).filter(Tag.uuid == uuid).scalar()
-        photos = s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.uuid == uuid).offset(page * pgsize).limit(pgsize).all()
+        photos = s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.uuid == uuid).order_by(PhotoSet.date.desc()).offset(page * pgsize).limit(pgsize).all()
         yield self.master.render("album.html", tag=tag, images=photos, total_items=numphotos, pgsize=100, page=page)
 
     @cherrypy.expose

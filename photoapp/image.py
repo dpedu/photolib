@@ -26,7 +26,7 @@ def get_jpg_info(fpath):
 
     photo = Photo(hash=get_hash(fpath), path=fpath, format=mime, size=size,
                   width=dimensions[0], height=dimensions[1], orientation=orientation)
-    return PhotoSet(date=date, lat=lat, lon=lon, files=[photo])
+    return PhotoSet(date=date, date_real=date, lat=lat, lon=lon, files=[photo])
 
 
 def get_mtime(fpath):

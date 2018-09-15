@@ -80,7 +80,8 @@ def batch_ingest(library, files):
             if foundmatch:
                 break
         if not foundmatch:
-            photos.append(PhotoSet(date=get_mtime(item), lat=0, lon=0, files=[itemmeta]))
+            mtime = get_mtime(item)
+            photos.append(PhotoSet(date=mtime, date_real=mtime, lat=0, lon=0, files=[itemmeta]))
             done += 1
             pprogress(done, total)
         # TODO prune any xmp without an associated regular image or cr2
@@ -90,7 +91,8 @@ def batch_ingest(library, files):
     for item in chain(*[byext[ext] for ext in files_video]):
         itemmeta = Photo(hash=get_hash(item), path=item, size=os.path.getsize(item),
                          format=special_magic(item))
-        photos.append(PhotoSet(date=get_mtime(item), lat=0, lon=0, files=[itemmeta]))
+        mtime = get_mtime(item)
+        photos.append(PhotoSet(date=mtime, date_real=mtime, lat=0, lon=0, files=[itemmeta]))
         done += 1
         pprogress(done, total)
 

@@ -19,7 +19,8 @@ setup(name='photoapp',
               "photoappd = photoapp.daemon:main",
               "photoimport = photoapp.ingest:main",
               "photovalidate = photoapp.validate:main",
-              "photoinfo = photoapp.image:main"
+              "photoinfo = photoapp.image:main",
+              "photooffset = photoapp.dateoffset:main",
           ]
       },
       include_package_data=True,
