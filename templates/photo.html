@@ -18,10 +18,27 @@
         <div class="photo-metadata">
             <h2>Information</h2>
             <ul>
-                <li><strong>Date:</strong> {{ image.date }} </li>
-                <li><strong>Versions:</strong> {{ image.files|length }}</li>
+                <li>
+                    <strong>Date:</strong> {{ image.date }}
+                </li>
+                {% if image.date_offset %}
+                <li>
+                    <strong>Time offset: </strong> {{ image.date_offset }}m
+                </li>
+                <li>
+                    <strong>Embedded date: </strong>{{ image.date_real }}
+                </li>
+                {% endif %}
+                <li>
+                    <strong>Status: </strong>{{ image.status | statusstr }}
+                </li>
+                <li>
+                    <strong>Versions:</strong> {{ image.files|length }}
+                </li>
                 {% if image.lat != 0 %}
-                <li><strong>Coordinates:</strong> <a href="/map?zoom=13&i={{ image.uuid }}">{{ image.lat }}, {{ image.lon }}</a></li>
+                <li>
+                    <strong>Coordinates:</strong> <a href="/map?zoom=13&i={{ image.uuid }}">{{ image.lat }}, {{ image.lon }}</a>
+                </li>
                 {% endif %}
             </ul>
         </div>
@@ -53,7 +70,7 @@
                         </div>
                         <div>
                             <a href="/download/one/{{ img.uuid }}">download</a>
-                            <a href="/download/one/{{ img.uuid }}.{{ mime2ext(img.format) }}?preview=true">preview</a>
+                            <a href="/download/one/{{ img.uuid }}.{{ img.format | mime2ext }}?preview=true">preview</a>
                         </div>
                     </div>
                 </li>
@@ -61,7 +78,7 @@
             </ul>
         </div>
         <div class="photo-tags">
-            <h2>Tags <a href="/photo/{{ image.uuid }}/tag">add</a></h2>
+            <h2>Tags{% if auth %} <a href="/create_tags?uuid={{ image.uuid }}">add</a>{% endif %}</h2>
             <ul class="tags-picker">
             {% for tagi in image.tags %}
                 <li>

@@ -1,0 +1,22 @@
+<div class="pager">
+    <h6>Page</h6>
+    {% if page > 0 %}
+    <div class="nav-prev">
+        <a href="{{path}}?page={{ page - 1 }}">Previous</a>
+    </div>
+    {% endif %}
+    <div class="pages">
+        <ul class="pager">
+        {% for pgnum in range(0, total_pages) %}
+            <li{% if pgnum == page %} class="current"{% endif %}>
+                <a href="{{path}}?page={{ pgnum }}">{{ pgnum }}</a>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% if page + 1 < total_pages %}
+    <div class="nav-next">
+        <a href="{{path}}?page={{ page + 1 }}">Next</a>
+    </div>
+    {% endif %}
+</div>

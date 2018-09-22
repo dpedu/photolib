@@ -14,38 +14,11 @@ import math
 APPROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
 
 
-class PhotosWeb(object):
-    def __init__(self, library, template_dir):
-        self.library = library
-        self.tpl = Environment(loader=FileSystemLoader(template_dir),
-                               autoescape=select_autoescape(['html', 'xml']))
-        self.tpl.globals.update(mime2ext=self.mime2ext)
-        self.tpl.filters['basename'] = os.path.basename
-        self.tpl.filters['ceil'] = math.ceil
-        self.thumb = ThumbnailView(self)
-        self.photo = PhotoView(self)
-        self.download = DownloadView(self)
-        self.date = DateView(self)
-        self.tag = TagView(self)
-        self.album = self.tag
+def auth():
+    return cherrypy.session.get('authed', None)
 
-    def render(self, template, **kwargs):
-        return self.tpl.get_template(template).render(**kwargs, **self.get_default_vars())
 
-    def get_default_vars(self):
-        s = self.session()
-        ret = {
-            "all_tags": s.query(Tag).order_by(Tag.title).all(),
-            "all_albums": s.query(Tag).filter(Tag.is_album == True).order_by(Tag.title).all(),
-            "path": cherrypy.request.path_info
-        }
-        return ret
-
-    def session(self):
-        return self.library.session()
-
-    @staticmethod
-    def mime2ext(mime):
+def mime2ext(mime):
         return {"image/png": "png",
                 "image/jpeg": "jpg",
                 "image/gif": "gif",
@@ -54,12 +27,62 @@ class PhotosWeb(object):
                 "video/mp4": "mp4",
                 "video/quicktime": "mov"}[mime]
 
+
+class PhotosWeb(object):
+    def __init__(self, library, template_dir):
+        self.library = library
+
+        self.tpl = Environment(loader=FileSystemLoader(template_dir),
+                               autoescape=select_autoescape(['html', 'xml']))
+        self.tpl.filters['mime2ext'] = mime2ext
+        self.tpl.filters['basename'] = os.path.basename
+        self.tpl.filters['ceil'] = math.ceil
+        self.tpl.filters['statusstr'] = lambda x: str(x).split(".")[-1]
+
+        self.thumb = ThumbnailView(self)
+        self.photo = PhotoView(self)
+        self.download = DownloadView(self)
+        self.date = DateView(self)
+        self.tag = TagView(self)
+        self.album = self.tag
+
+    def render(self, template, **kwargs):
+        """
+        Render a template
+        """
+        return self.tpl.get_template(template).render(**kwargs, **self.get_default_vars())
+
+    def get_default_vars(self):
+        """
+        Return a dict containing variables expected to be on every page
+        """
+        s = self.session()
+        ret = {
+            "all_tags": s.query(Tag).order_by(Tag.title).all(),
+            "all_albums": s.query(Tag).filter(Tag.is_album == True).order_by(Tag.title).all(),
+            "path": cherrypy.request.path_info
+        }
+        s.close()
+        return ret
+
+    def session(self):
+        """
+        Get a database session
+        """
+        return self.library.session()
+
     @cherrypy.expose
     def index(self):
+        """
+        Home page - redirect to the photo feed
+        """
         raise cherrypy.HTTPRedirect('feed', 302)
 
     @cherrypy.expose
     def feed(self, page=0, pgsize=25):
+        """
+        /feed - main photo feed - show photos sorted by date, newest first
+        """
         s = self.session()
         page, pgsize = int(page), int(pgsize)
         total_sets = s.query(func.count(PhotoSet.id)).first()[0]
@@ -67,7 +90,10 @@ class PhotosWeb(object):
         yield self.render("feed.html", images=[i for i in images], page=page, pgsize=int(pgsize), total_sets=total_sets)
 
     @cherrypy.expose
-    def monthly(self):
+    def stats(self):
+        """
+        /stats - show server statistics
+        """
         s = self.session()
         images = s.query(func.count(PhotoSet.uuid),
                          func.strftime('%Y', PhotoSet.date).label('year'),
@@ -78,6 +104,10 @@ class PhotosWeb(object):
 
     @cherrypy.expose
     def map(self, i=None, zoom=3):
+        """
+        /map - show all photos on the a map, or a single point if $i is passed
+        TODO using so many coordinates is slow in the browser. dedupe them somehow.
+        """
         s = self.session()
         query = s.query(PhotoSet).filter(PhotoSet.lat != 0, PhotoSet.lon != 0)
         if i:
@@ -153,20 +183,12 @@ class DateView(object):
             group_by('gdate').order_by(desc('year'), 'month', 'day').all()
         yield self.master.render("dates.html", images=images)
 
-    @cherrypy.expose
-    def tag(self, date):
-        raise Exception("Who am i")
-        s = self.master.session()
-        dt = datetime.strptime(date, "%Y-%m-%d")
-        dt_end = dt + timedelta(days=1)
-        photos = s.query(PhotoSet).filter(and_(PhotoSet.date >= dt,
-                                               PhotoSet.date < dt_end)).order_by(PhotoSet.date).all()
-        alltags = s.query(Tag).order_by(Tag.title).all()
-        yield self.master.render("create_tags.html", images=photos, alltags=alltags)
-
 
 @cherrypy.popargs('item_type', 'thumb_size', 'uuid')
 class ThumbnailView(object):
+    """
+    Generate and serve thumbnails on-demand
+    """
     def __init__(self, master):
         self.master = master
         self._cp_config = {"tools.trailing_slash.on": False}
@@ -202,6 +224,9 @@ class ThumbnailView(object):
 
 @cherrypy.popargs('item_type', 'uuid')
 class DownloadView(object):
+    """
+    View original files or force-download them
+    """
     def __init__(self, master):
         self.master = master
         self._cp_config = {"tools.trailing_slash.on": False}
@@ -225,6 +250,9 @@ class DownloadView(object):
 
 @cherrypy.popargs('uuid')
 class PhotoView(object):
+    """
+    View a single photo
+    """
     def __init__(self, master):
         self.master = master
         self._cp_config = {"tools.trailing_slash.on": False}
