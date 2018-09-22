@@ -336,8 +336,13 @@ class TagView(object):
             tag.is_album = 0
         elif op == "Promote to album":
             tag.is_album = 1
+        elif op == "Delete tag":
+            s.query(TagItem).filter(TagItem.tag_id == tag.id).delete()
+            s.delete(tag)
+            s.commit()
+            raise cherrypy.HTTPRedirect('/', 302)
         else:
-            raise Exception("Invalid op")
+            raise Exception("Invalid op: '{}'".format(op))
         s.commit()
         raise cherrypy.HTTPRedirect('/tag/{}'.format(tag.uuid), 302)
 
