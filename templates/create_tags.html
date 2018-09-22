@@ -21,7 +21,12 @@
         <ul class="tags-picker">
         {% for tagi in images[0].tags %}
             <li>
-                <a href="/tag/{{ tagi.tag.uuid }}">{{ tagi.tag.title }}</a>
+                <form action="/create_tags" method="post">
+                    {% if fromdate %}<input type="hidden" name="fromdate" value="{{ fromdate }}" />{% endif %}
+                    {% if uuid %}<input type="hidden" name="uuid" value="{{ uuid }}" />{% endif %}
+                    <input type="hidden" name="remove" value="{{ tagi.tag.uuid }}" />
+                    <input class="submit-link" type="submit" value="{{ tagi.tag.title }}" />
+                </form>
             </li>
         {% endfor %}
         </ul>
@@ -33,6 +38,7 @@
             <li>
                 <form action="/create_tags" method="post">
                     {% if fromdate %}<input type="hidden" name="fromdate" value="{{ fromdate }}" />{% endif %}
+                    {% if uuid %}<input type="hidden" name="uuid" value="{{ uuid }}" />{% endif %}
                     <input type="hidden" name="tag" value="{{ tag.uuid }}" />
                     <input class="submit-link" type="submit" value="{{ tag.title }}" />
                 </form>
@@ -44,6 +50,7 @@
         <h2>Add tag</h2>
         <form action="/create_tags" method="post" class="pure-form">
             {% if fromdate %}<input type="hidden" name="fromdate" value="{{ fromdate }}" />{% endif %}
+            {% if uuid %}<input type="hidden" name="uuid" value="{{ uuid }}" />{% endif %}
             <input type="text" name="newtag" placeholder="new tag name" />
             <input type="submit" value="Add" class="pure-button pure-button-primary" />
         </form>

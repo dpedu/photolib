@@ -60,7 +60,8 @@ class PhotosWeb(object):
         ret = {
             "all_tags": s.query(Tag).order_by(Tag.title).all(),
             "all_albums": s.query(Tag).filter(Tag.is_album == True).order_by(Tag.title).all(),
-            "path": cherrypy.request.path_info
+            "path": cherrypy.request.path_info,
+            "auth": auth()
         }
         s.close()
         return ret
@@ -115,21 +116,37 @@ class PhotosWeb(object):
         yield self.render("map.html", images=query.all(), zoom=int(zoom))
 
     @cherrypy.expose
-    def create_tags(self, fromdate=None, tag=None, newtag=None):
+    def create_tags(self, fromdate=None, uuid=None, tag=None, newtag=None, remove=None):
         """
-        Tag multiple items addressable in one of a couple ways
-        TODO move this somewhere better?
+        /create_tags - tag multiple items selected by day of photo
+        :param fromdate: act upon photos taken on this day
+        :param uuid: act upon a single photo with this uuid
+        :param tag: target photos will have a tag specified by this uuid added
+        :param remove: target photos will have the tag specified by this uuid removed
+        :param newtag: new tag name to create
         """
         s = self.session()
-        photos = None
-        num_photos = None
-        if fromdate:
-            dt = datetime.strptime(fromdate, "%Y-%m-%d")
-            dt_end = dt + timedelta(days=1)
-            photos = s.query(PhotoSet).filter(and_(PhotoSet.date >= dt,
-                                                   PhotoSet.date < dt_end)).order_by(PhotoSet.date)
-            num_photos = s.query(func.count(PhotoSet.id)). \
-                filter(and_(PhotoSet.date >= dt, PhotoSet.date < dt_end)).order_by(PhotoSet.date).scalar()
+
+        def get_photos():
+            if fromdate:
+                dt = datetime.strptime(fromdate, "%Y-%m-%d")
+                dt_end = dt + timedelta(days=1)
+                photos = s.query(PhotoSet).filter(and_(PhotoSet.date >= dt,
+                                                       PhotoSet.date < dt_end)).order_by(PhotoSet.date)
+                num_photos = s.query(func.count(PhotoSet.id)). \
+                    filter(and_(PhotoSet.date >= dt, PhotoSet.date < dt_end)).order_by(PhotoSet.date).scalar()
+
+            if uuid:
+                photos = s.query(PhotoSet).filter(PhotoSet.uuid == uuid)
+                num_photos = s.query(func.count(PhotoSet.id)).filter(PhotoSet.uuid == uuid).scalar()
+            return photos, num_photos
+
+        if remove:
+            rmtag = s.query(Tag).filter(Tag.uuid == remove).first()
+            photoq, _ = get_photos()
+            for photo in photoq:
+                s.query(TagItem).filter(TagItem.tag_id == rmtag.id, TagItem.set_id == photo.id).delete()
+            s.commit()
 
         if newtag:
                 # TODO validate uuid ?
@@ -137,6 +154,8 @@ class PhotosWeb(object):
                 # TODO generate slug now or in model?
                 s.commit()
                 # raise cherrypy.HTTPRedirect('/photo/{}/tag'.format(uuid), 302)
+
+        photos, num_photos = get_photos()
 
         if tag:  # Create the tag on all the photos
             tag = s.query(Tag).filter(Tag.uuid == tag).first()
@@ -147,7 +166,23 @@ class PhotosWeb(object):
             s.commit()
 
         alltags = s.query(Tag).order_by(Tag.title).all()
-        yield self.render("create_tags.html", images=photos, alltags=alltags, num_photos=num_photos, fromdate=fromdate)
+        yield self.render("create_tags.html", images=photos, alltags=alltags,
+                          num_photos=num_photos, fromdate=fromdate, uuid=uuid)
+
+    @cherrypy.expose
+    def login(self):
+        """
+        /login - enable super features by logging into the app
+        """
+        cherrypy.session['authed'] = cherrypy.request.login
+        raise cherrypy.HTTPRedirect('/feed', 302)
+
+    @cherrypy.expose
+    def sess(self):
+        """
+        /sess - TODO DELETE ME dump session contents for debugging purposes
+        """
+        yield cherrypy.session['authed']
 
 
 @cherrypy.popargs('date')
@@ -262,40 +297,7 @@ class PhotoView(object):
         uuid = uuid.split(".")[0]
         s = self.master.session()
         photo = s.query(PhotoSet).filter(PhotoSet.uuid == uuid).first()
-
         yield self.master.render("photo.html", image=photo)
-
-        # yield "viewing {}".format(uuid)
-
-    @cherrypy.expose
-    def tag(self, uuid):
-        s = self.master.session()
-        photo = s.query(PhotoSet).filter(PhotoSet.uuid == uuid).first()
-        alltags = s.query(Tag).order_by(Tag.title).all()
-        yield self.master.render("photo_tag.html", image=photo, alltags=alltags)
-
-    @cherrypy.expose
-    def tag_create(self, uuid, tag):
-        # TODO validate uuid ?
-        s = self.master.session()
-        s.add(Tag(title=tag))  # TODO slug
-        # TODO generate slug now or in model?
-        s.commit()
-        raise cherrypy.HTTPRedirect('/photo/{}/tag'.format(uuid), 302)
-
-    @cherrypy.expose
-    def tag_add(self, uuid, tag):
-        # TODO validate uuid ?
-        # TODO validate tag ?
-        s = self.master.session()
-        tag = s.query(Tag).filter(Tag.uuid == tag).first()
-        item = s.query(PhotoSet).filter(PhotoSet.uuid == uuid).first()
-        s.add(TagItem(tag_id=tag.id, set_id=item.id))
-        try:
-            s.commit()
-        except IntegrityError:  # tag already applied
-            pass
-        raise cherrypy.HTTPRedirect('/photo/{}/tag'.format(uuid), 302)
 
 
 @cherrypy.popargs('uuid')
@@ -312,10 +314,19 @@ class TagView(object):
         page = int(page)
         pgsize = 100
         s = self.master.session()
-        tag = s.query(Tag).filter(Tag.uuid == uuid).first()
-        numphotos = s.query(func.count(Tag.id)).join(TagItem).join(PhotoSet).filter(Tag.uuid == uuid).scalar()
-        photos = s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.uuid == uuid).order_by(PhotoSet.date.desc()).offset(page * pgsize).limit(pgsize).all()
-        yield self.master.render("album.html", tag=tag, images=photos, total_items=numphotos, pgsize=100, page=page)
+
+        if uuid == "untagged":
+            numphotos = s.query(func.count(PhotoSet.id)).filter(~PhotoSet.id.in_(s.query(TagItem.set_id))).scalar()
+            photos = s.query(PhotoSet).filter(~PhotoSet.id.in_(s.query(TagItem.set_id))).\
+                offset(page * pgsize).limit(pgsize).all()
+            yield self.master.render("untagged.html", images=photos, total_items=numphotos, pgsize=pgsize, page=page)
+        else:
+            tag = s.query(Tag).filter(Tag.uuid == uuid).first()
+            numphotos = s.query(func.count(Tag.id)).join(TagItem).join(PhotoSet).filter(Tag.uuid == uuid).scalar()
+            photos = s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.uuid == uuid). \
+                order_by(PhotoSet.date.desc()).offset(page * pgsize).limit(pgsize).all()
+            yield self.master.render("album.html", tag=tag, images=photos,
+                                     total_items=numphotos, pgsize=pgsize, page=page)
 
     @cherrypy.expose
     def op(self, uuid, op):
@@ -355,34 +366,27 @@ def main():
     web = PhotosWeb(library, tpl_dir)
     web_config = {}
 
-    # TODO make auth work again
-    if True or args.disable_auth:
-        logging.warning("starting up with auth disabled")
-    else:
-        def validate_password(realm, username, password):
-            print("I JUST VALIDATED {}:{} ({})".format(username, password, realm))
-            return True
-
-        web_config.update({'tools.auth_basic.on': True,
-                           'tools.auth_basic.realm': 'pysonic',
-                           'tools.auth_basic.checkpassword': validate_password})
+    def validate_password(realm, username, password):
+        print("I JUST VALIDATED {}:{} ({})".format(username, password, realm))
+        return True
 
     cherrypy.tree.mount(web, '/', {'/': web_config,
                                    '/static': {"tools.staticdir.on": True,
-                                               "tools.staticdir.dir": os.path.join(APPROOT, "styles/dist") if not args.debug else os.path.abspath("styles/dist")}})
+                                               "tools.staticdir.dir": os.path.join(APPROOT, "styles/dist")
+                                               if not args.debug else os.path.abspath("styles/dist")},
+                                   '/login': {'tools.auth_basic.on': True,
+                                              'tools.auth_basic.realm': 'photolib',
+                                              'tools.auth_basic.checkpassword': validate_password}})
 
     cherrypy.config.update({
-        # 'sessionFilter.on': True,
-        # 'tools.sessions.on': True,
-        # 'tools.sessions.locking': 'explicit',
-        # 'tools.sessions.timeout': 525600,
-        # 'tools.gzip.on': True,
+        'tools.sessions.on': True,
+        'tools.sessions.locking': 'explicit',
+        'tools.sessions.timeout': 525600,
         'request.show_tracebacks': True,
         'server.socket_port': args.port,
         'server.thread_pool': 25,
         'server.socket_host': '0.0.0.0',
         'server.show_tracebacks': True,
-        # 'server.socket_timeout': 5,
         'log.screen': False,
         'engine.autoreload.on': args.debug
     })
