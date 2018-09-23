@@ -25,5 +25,6 @@ setup(name='photoapp',
       },
       include_package_data=True,
       package_data={'photoapp': ['../templates/*.html',
+                                 '../templates/fragments/*.html',
                                  '../styles/dist/*']},
       zip_safe=False)

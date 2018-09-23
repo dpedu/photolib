@@ -6,7 +6,7 @@ from photoapp.library import PhotoLibrary
 from photoapp.types import Photo, PhotoSet, Tag, TagItem, PhotoStatus
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import desc
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, or_
 import math
 from urllib.parse import urlparse
 
@@ -342,22 +342,34 @@ class PhotoView(object):
 
     @cherrypy.expose
     def index(self, uuid):
-        uuid = uuid.split(".")[0]
+        # uuid = uuid.split(".")[0]
         s = self.master.session()
-        photo = photo_auth_filter(s.query(PhotoSet)).filter(PhotoSet.uuid == uuid).first()
+        photo = photo_auth_filter(s.query(PhotoSet)).filter(or_(PhotoSet.uuid == uuid, PhotoSet.slug == uuid)).first()
         yield self.master.render("photo.html", image=photo)
 
     @cherrypy.expose
     @require_auth
-    def op(self, uuid, op):
+    def op(self, uuid, op, title=None, description=None, offset=None):
         s = self.master.session()
         photo = s.query(PhotoSet).filter(PhotoSet.uuid == uuid).first()
         if op == "Make public":
             photo.status = PhotoStatus.public
         elif op == "Make private":
             photo.status = PhotoStatus.private
+        elif op == "Save":
+            photo.title = title
+            photo.description = description
+            photo.slug = slugify(title) or None
+            photo.date_offset = int(offset) if offset else 0
         s.commit()
-        raise cherrypy.HTTPRedirect('/photo/{}'.format(photo.uuid), 302)
+        raise cherrypy.HTTPRedirect('/photo/{}'.format(photo.slug or photo.uuid), 302)
+
+    @cherrypy.expose
+    @require_auth
+    def edit(self, uuid):
+        s = self.master.session()
+        photo = photo_auth_filter(s.query(PhotoSet)).filter(PhotoSet.uuid == uuid).first()
+        yield self.master.render("photo_edit.html", image=photo)
 
 
 @cherrypy.popargs('uuid')
@@ -379,14 +391,18 @@ class TagView(object):
             numphotos = photo_auth_filter(s.query(func.count(PhotoSet.id))). \
                 filter(~PhotoSet.id.in_(s.query(TagItem.set_id))).scalar()
             photos = photo_auth_filter(s.query(PhotoSet)).filter(~PhotoSet.id.in_(s.query(TagItem.set_id))).\
-                offset(page * pgsize).limit(pgsize).all()
+                offset(page * pgsize). \
+                limit(pgsize).all()
             yield self.master.render("untagged.html", images=photos, total_items=numphotos, pgsize=pgsize, page=page)
         else:
-            tag = s.query(Tag).filter(Tag.uuid == uuid).first()
+            tag = s.query(Tag).filter(or_(Tag.uuid == uuid, Tag.slug == uuid)).first()
             numphotos = photo_auth_filter(s.query(func.count(Tag.id)).join(TagItem).join(PhotoSet)). \
-                filter(Tag.uuid == uuid).scalar()
-            photos = photo_auth_filter(s.query(PhotoSet)).join(TagItem).join(Tag).filter(Tag.uuid == uuid). \
-                order_by(PhotoSet.date.desc()).offset(page * pgsize).limit(pgsize).all()
+                filter(Tag.id == tag.id).scalar()
+            photos = photo_auth_filter(s.query(PhotoSet)).join(TagItem).join(Tag). \
+                filter(Tag.id == tag.id). \
+                order_by(PhotoSet.date.desc()). \
+                offset(page * pgsize). \
+                limit(pgsize).all()
             yield self.master.render("album.html", tag=tag, images=photos,
                                      total_items=numphotos, pgsize=pgsize, page=page)
 
@@ -402,7 +418,7 @@ class TagView(object):
         - Make all private: mark all photos under this tag as private
         """
         s = self.master.session()
-        tag = s.query(Tag).filter(Tag.uuid == uuid).first()
+        tag = s.query(Tag).filter(or_(Tag.uuid == uuid, Tag.slug == uuid)).first()
         if op == "Demote to tag":
             tag.is_album = 0
         elif op == "Promote to album":
@@ -414,11 +430,11 @@ class TagView(object):
             raise cherrypy.HTTPRedirect('/', 302)
         elif op == "Make all public":
             # TODO smarter query
-            for photo in s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.uuid == uuid).all():
+            for photo in s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.id == tag.id).all():
                 photo.status = PhotoStatus.public
         elif op == "Make all private":
             # TODO smarter query
-            for photo in s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.uuid == uuid).all():
+            for photo in s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.id == tag.id).all():
                 photo.status = PhotoStatus.private
         else:
             raise Exception("Invalid op: '{}'".format(op))

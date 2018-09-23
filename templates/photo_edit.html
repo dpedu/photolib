@@ -1,0 +1,36 @@
+{% extends "page.html" %}
+{% block title %}Editing {{ image.uuid }}{% endblock %}
+{% block subtitle %}{{ image.date }}{% endblock %}
+
+{% block buttons %}
+    <a href="/photo/{{ image.uuid }}"><button class="secondary-button pure-button">Back</button></a>
+{% endblock %}
+
+{% block body %}
+
+<div class="photo-view pure-g">
+    <div class="photo-form pure-u-2-3">
+        <form action="/photo/{{ image.uuid }}/op" method="post" class="pure-form pure-form-stacked">
+            <fieldset>
+                <fieldset class="pure-group pure-u-1">
+                    <input name="title" type="text" class="pure-input-1" placeholder="Image title" value="{{ image.title or "" }}" />
+                    <textarea name="description" class="pure-input-1" placeholder="Description" rows="15">{{ image.description or "" }}</textarea>
+                </fieldset>
+                <div class="pure-u-1">
+                    <label for="offset">Offset (minutes)</label>
+                    <input id="offset" class="pure-u-1-2" type="text" name="offset" value="{{ image.date_offset }}" />
+                </div>
+                <div class="pure-u-1">
+                    <input type="submit" class="pure-button pure-button-primary" name="op" value="Save" />
+                </div>
+            </fieldset>
+        </form>
+    </div>
+    <div class="photo-info pure-u-1-3">
+        <a href="/photo/{{ image.uuid }}" class="pure-g-1-4">
+            <img src="/thumb/set/feed/{{ image.uuid }}.jpg" />
+        </a>
+    </div>
+</div>
+
+{% endblock %}

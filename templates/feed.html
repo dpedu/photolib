@@ -1,10 +1,7 @@
 {% extends "page.html" %}
-{% set title = "Photos by date" %}
-{% set subtitle = "By date, descending" %}
-
-{% block buttons %}
-    xxx
-{% endblock %}
+{% block title %}Photos by date{% endblock %}
+{% block subtitle %}By date, descending{% endblock %}
+{% block buttons %}{% endblock %}
 
 {% block body %}
 
@@ -20,11 +17,7 @@
             {% set locals.im_date = newdate %}
             <div class="feed-divider year"><h4>{{ locals.im_date }}</h4></div>
         {% endif %}
-        <div class="photo">
-            <a href="/photo/{{ item.uuid }}">
-                <img src="/thumb/set/feed/{{ item.uuid }}.jpg" />
-            </a>
-        </div>
+        {% include "fragments/feed-photo.html" %}
     {% endfor %}
     <br style="clear:both" />
     {% include "pager.html" %}

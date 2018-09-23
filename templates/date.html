@@ -1,6 +1,6 @@
 {% extends "page.html" %}
-{% set title = "Photos on {}".format(date.strftime("%b %d, %Y")) %}
-{% set subtitle = "By date, descending" %}
+{% block title %}{{ "Photos on {}".format(date.strftime("%b %d, %Y")) }}{% endblock %}
+{% block subtitle %}{% endblock %}
 
 {% block buttons %}
     <form action="/create_tags" method="post">
@@ -25,11 +25,7 @@
             {% set locals.im_date = newdate %}
             <div class="feed-divider year"><h4>{{ locals.im_date }}</h4></div>
         {% endif %}
-        <div class="photo">
-            <a href="/photo/{{ item.uuid }}">
-                <img src="/thumb/set/feed/{{ item.uuid }}.jpg" />
-            </a>
-        </div>
+        {% include "fragments/feed-photo.html" %}
     {% endfor %}
     <br style="clear:both" />
     <div class="pager">

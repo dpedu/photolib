@@ -22,11 +22,11 @@
                         <li class="pure-menu-item"><a href="/admin/trash" class="pure-menu-link">Trash</a></li>
                         <li class="pure-menu-heading">Albums</li>
                         {% for tag in all_albums %}
-                            <li class="pure-menu-item"><a href="/album/{{ tag.uuid }}" class="pure-menu-link"><span class="tag-icon tag-icon-mod-6-{{ tag.id % 6 }}"></span>{{ tag.title }}</a></li>
+                            <li class="pure-menu-item"><a href="/album/{{ tag.slug }}" class="pure-menu-link"><span class="tag-icon tag-icon-mod-6-{{ tag.id % 6 }}"></span>{{ tag.name }}</a></li>
                         {% endfor %}
                         <li class="pure-menu-heading">Tags</li>
                         {% for tag in all_tags %}
-                            <li class="pure-menu-item"><a href="/tag/{{ tag.uuid }}" class="pure-menu-link"><span class="tag-icon tag-icon-mod-6-{{ tag.id % 6 }}"></span>{{ tag.title }}</a></li>
+                            <li class="pure-menu-item"><a href="/tag/{{ tag.slug }}" class="pure-menu-link"><span class="tag-icon tag-icon-mod-6-{{ tag.id % 6 }}"></span>{{ tag.name }}</a></li>
                         {% endfor %}
                     </ul>
                 </div>
@@ -45,9 +45,9 @@
             <div class="email-content">
                 <div class="email-content-header pure-g">
                     <div class="pure-u-1-2">
-                        <h1 class="email-content-title">{{ title }}</h1>
+                        <h1 class="email-content-title">{% block title %}DEFAULT TITLE{% endblock %}</h1>
                         <p class="email-content-subtitle">
-                            {{ subtitle }}
+                            {% block subtitle %}DEFAULT SUBTITLE{% endblock %}
                         </p>
                     </div>
                     {% if auth %}
