@@ -193,7 +193,7 @@ class PhotosWeb(object):
             s.commit()
 
         if newtag:
-            s.add(Tag(title=newtag, description=newtag.capitalize(), slug=slugify(newtag)))
+            s.add(Tag(title=newtag.capitalize(), name=newtag, slug=slugify(newtag)))
             s.commit()
 
         photos, num_photos = get_photos()
@@ -229,6 +229,10 @@ class PhotosWeb(object):
         dest = "/feed" if "Referer" not in cherrypy.request.headers \
             else urlparse(cherrypy.request.headers["Referer"]).path
         raise cherrypy.HTTPRedirect(dest, 302)
+
+    @cherrypy.expose
+    def error(self, status, message, traceback, version):
+        yield self.render("error.html", status=status, message=message, traceback=traceback)
 
 
 @cherrypy.popargs('date')
@@ -345,11 +349,20 @@ class PhotoView(object):
         # uuid = uuid.split(".")[0]
         s = self.master.session()
         photo = photo_auth_filter(s.query(PhotoSet)).filter(or_(PhotoSet.uuid == uuid, PhotoSet.slug == uuid)).first()
+        if not photo:
+            raise cherrypy.HTTPError(404)
         yield self.master.render("photo.html", image=photo)
 
     @cherrypy.expose
     @require_auth
     def op(self, uuid, op, title=None, description=None, offset=None):
+        """
+        Modify a photo
+        :param op: operation to perform:
+         * "Make public":
+         * "Make private":
+         * "Save": update the photo's title, description, and date_offset fields
+        """
         s = self.master.session()
         photo = s.query(PhotoSet).filter(PhotoSet.uuid == uuid).first()
         if op == "Make public":
@@ -464,7 +477,8 @@ def main():
     tpl_dir = os.path.join(APPROOT, "templates") if not args.debug else "templates"
 
     web = PhotosWeb(library, tpl_dir)
-    web_config = {}
+    web_config = {'error_page.403': web.error,
+                  'error_page.404': web.error}
 
     def validate_password(realm, username, password):
         print("I JUST VALIDATED {}:{} ({})".format(username, password, realm))

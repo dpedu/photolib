@@ -1,0 +1,17 @@
+{% extends "page.html" %}
+{% block title %}{{ status }}{% endblock %}
+{% block subtitle %}{% endblock %}
+{% block buttons %}{% endblock %}
+
+{% block body %}
+
+<div class="photo-feed">
+    <div>
+        <p>{{ message }}</p>
+    </div>
+    <div>
+        <pre>{{ traceback }}</pre>
+    </div>
+</div>
+
+{% endblock %}

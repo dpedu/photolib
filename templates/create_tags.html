@@ -1,6 +1,7 @@
 {% extends "page.html" %}
-{% set title = "Placeholder Title" %}
-{% set subtitle = "Foobar" %}
+{% block title %}Tagging {{ num_photos }} photo{% if num_photos > 1 %}s{% endif %}{% endblock %}
+{% block subtitle %}{% endblock %}
+{% block buttons %}{% endblock %}
 
 
 {% block body %}
@@ -25,7 +26,7 @@
                     {% if fromdate %}<input type="hidden" name="fromdate" value="{{ fromdate }}" />{% endif %}
                     {% if uuid %}<input type="hidden" name="uuid" value="{{ uuid }}" />{% endif %}
                     <input type="hidden" name="remove" value="{{ tagi.tag.uuid }}" />
-                    <input class="submit-link" type="submit" value="{{ tagi.tag.title }}" />
+                    <input class="submit-link" type="submit" value="{{ tagi.tag.name }}" />
                 </form>
             </li>
         {% endfor %}
@@ -40,7 +41,7 @@
                     {% if fromdate %}<input type="hidden" name="fromdate" value="{{ fromdate }}" />{% endif %}
                     {% if uuid %}<input type="hidden" name="uuid" value="{{ uuid }}" />{% endif %}
                     <input type="hidden" name="tag" value="{{ tag.uuid }}" />
-                    <input class="submit-link" type="submit" value="{{ tag.title }}" />
+                    <input class="submit-link" type="submit" value="{{ tag.name }}" />
                 </form>
             </li>
         {% endfor %}
