@@ -32,6 +32,7 @@ class PhotoSet(Base):
 
     title = Column(String)
     description = Column(String)
+    slug = Column(String)
 
     status = Column(Enum(PhotoStatus), default=PhotoStatus.private)
 
@@ -62,8 +63,13 @@ class Tag(Base):
     created = Column(DateTime, default=lambda: datetime.now())
     modified = Column(DateTime, default=lambda: datetime.now())
     is_album = Column(Boolean, default=False)
-    title = Column(String, unique=True)
+    # slug-like short name such as "iomtrip"
+    name = Column(String, unique=True)
+    # longer human-format title like "Isle of Man trip"
+    title = Column(String)
+    # url slug like "isle-of-man-trip"
     slug = Column(String, unique=True)
+    # fulltext description
     description = Column(String)
 
     entries = relationship("TagItem", back_populates="tag")

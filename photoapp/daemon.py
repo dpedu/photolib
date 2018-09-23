@@ -54,16 +54,20 @@ def photo_auth_filter(query):
     return query.filter(PhotoSet.status == PhotoStatus.public) if not auth() else query
 
 
+def slugify(words):
+    return ''.join(letter for letter in '-'.join(words.lower().split())
+                   if ('a' <= letter <= 'z') or ('0' <= letter <= '9') or letter == '-')
+
+
 class PhotosWeb(object):
     def __init__(self, library, template_dir):
         self.library = library
-
         self.tpl = Environment(loader=FileSystemLoader(template_dir),
                                autoescape=select_autoescape(['html', 'xml']))
-        self.tpl.filters['mime2ext'] = mime2ext
-        self.tpl.filters['basename'] = os.path.basename
-        self.tpl.filters['ceil'] = math.ceil
-        self.tpl.filters['statusstr'] = lambda x: str(x).split(".")[-1]
+        self.tpl.filters.update(mime2ext=mime2ext,
+                                basename=os.path.basename,
+                                ceil=math.ceil,
+                                statusstr=lambda x: str(x).split(".")[-1])
 
         self.thumb = ThumbnailView(self)
         self.photo = PhotoView(self)
@@ -87,12 +91,12 @@ class PhotosWeb(object):
         tagq = s.query(Tag).join(TagItem).join(PhotoSet)
         if not auth():
             tagq = tagq.filter(PhotoSet.status == PhotoStatus.public)
-        tagq = tagq.filter(Tag.is_album == False).order_by(Tag.title).all()  # pragma: manual auth
+        tagq = tagq.filter(Tag.is_album == False).order_by(Tag.name).all()  # pragma: manual auth
 
         albumq = s.query(Tag).join(TagItem).join(PhotoSet)
         if not auth():
             albumq = albumq.filter(PhotoSet.status == PhotoStatus.public)
-        albumq = albumq.filter(Tag.is_album == True).order_by(Tag.title).all()  # pragma: manual auth
+        albumq = albumq.filter(Tag.is_album == True).order_by(Tag.name).all()  # pragma: manual auth
 
         ret = {
             "all_tags": tagq,
@@ -189,11 +193,8 @@ class PhotosWeb(object):
             s.commit()
 
         if newtag:
-                # TODO validate uuid ?
-                s.add(Tag(title=newtag))  # TODO slug
-                # TODO generate slug now or in model?
-                s.commit()
-                # raise cherrypy.HTTPRedirect('/photo/{}/tag'.format(uuid), 302)
+            s.add(Tag(title=newtag, description=newtag.capitalize(), slug=slugify(newtag)))
+            s.commit()
 
         photos, num_photos = get_photos()
 
@@ -205,7 +206,7 @@ class PhotosWeb(object):
                     s.add(TagItem(tag_id=tag.id, set_id=photo.id))
             s.commit()
 
-        alltags = s.query(Tag).order_by(Tag.title).all()
+        alltags = s.query(Tag).order_by(Tag.name).all()
         yield self.render("create_tags.html", images=photos, alltags=alltags,
                           num_photos=num_photos, fromdate=fromdate, uuid=uuid)
 
