@@ -21,6 +21,7 @@ setup(name='photoapp',
               "photovalidate = photoapp.validate:main",
               "photoinfo = photoapp.image:main",
               "photooffset = photoapp.dateoffset:main",
+              "photousers = photoapp.users:main",
           ]
       },
       include_package_data=True,

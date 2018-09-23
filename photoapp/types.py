@@ -87,3 +87,19 @@ class TagItem(Base):
     set = relationship("PhotoSet", back_populates="tags", foreign_keys=[set_id])
 
     UniqueConstraint(tag_id, set_id)
+
+
+class UserStatus(enum.Enum):
+    banned = -1
+    guest = 0
+    normal = 1
+    admin = 2
+
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(length=64), unique=True)
+    password = Column(String(length=64))  # sha256
+    status = Column(Enum(UserStatus), default=UserStatus.normal)

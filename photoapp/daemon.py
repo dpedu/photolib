@@ -3,10 +3,11 @@ import cherrypy
 import logging
 from datetime import datetime, timedelta
 from photoapp.library import PhotoLibrary
-from photoapp.types import Photo, PhotoSet, Tag, TagItem, PhotoStatus
+from photoapp.types import Photo, PhotoSet, Tag, TagItem, PhotoStatus, User
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import desc
 from sqlalchemy import func, and_, or_
+from photoapp.common import pwhash
 import math
 from urllib.parse import urlparse
 
@@ -486,8 +487,10 @@ def main():
                   'error_page.404': web.error}
 
     def validate_password(realm, username, password):
-        print("I JUST VALIDATED {}:{} ({})".format(username, password, realm))
-        return True
+        s = library.session()
+        if s.query(User).filter(User.name == username, User.password == pwhash(password)).first():
+            return True
+        return False
 
     cherrypy.tree.mount(web, '/', {'/': web_config,
                                    '/static': {"tools.staticdir.on": True,
