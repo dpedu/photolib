@@ -6,9 +6,9 @@ from photoapp.library import PhotoLibrary
 from photoapp.types import Photo, PhotoSet, Tag, TagItem, PhotoStatus
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import desc
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, and_
 import math
+from urllib.parse import urlparse
 
 
 APPROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
@@ -215,15 +215,19 @@ class PhotosWeb(object):
         /login - enable super features by logging into the app
         """
         cherrypy.session['authed'] = cherrypy.request.login
-        raise cherrypy.HTTPRedirect('/feed', 302)
+        dest = "/feed" if "Referer" not in cherrypy.request.headers \
+            else urlparse(cherrypy.request.headers["Referer"]).path
+        raise cherrypy.HTTPRedirect(dest, 302)
 
     @cherrypy.expose
     def logout(self):
         """
-        /login - enable super features by logging into the app
+        /logout
         """
         cherrypy.session.clear()
-        raise cherrypy.HTTPRedirect('/feed', 302)
+        dest = "/feed" if "Referer" not in cherrypy.request.headers \
+            else urlparse(cherrypy.request.headers["Referer"]).path
+        raise cherrypy.HTTPRedirect(dest, 302)
 
 
 @cherrypy.popargs('date')
