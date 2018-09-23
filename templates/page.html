@@ -16,7 +16,7 @@
                         <li class="pure-menu-item"><a href="/" class="pure-menu-link">All photos</a></li>
                         <li class="pure-menu-item"><a href="/albums" class="pure-menu-link">Albums</a></li>
                         <li class="pure-menu-item"><a href="/date" class="pure-menu-link">Dates</a></li>
-                        <li class="pure-menu-item"><a href="/monthly" class="pure-menu-link">Stats</a></li>
+                        <li class="pure-menu-item"><a href="/stats" class="pure-menu-link">Stats</a></li>
                         <li class="pure-menu-item"><a href="/map" class="pure-menu-link">Map</a></li>
                         <li class="pure-menu-item"><a href="/tag/untagged" class="pure-menu-link">Untagged</a></li>
                         <li class="pure-menu-item"><a href="/admin/trash" class="pure-menu-link">Trash</a></li>
@@ -30,6 +30,15 @@
                         {% endfor %}
                     </ul>
                 </div>
+                <div class="user-status">
+                    {% if auth %}
+                        <p>Authed as <span>{{ auth }}</span></p>
+                        <p><a href="/logout">Log out</a></p>
+                    {% else %}
+                        <p>Browsing as a guest</p>
+                        <p><a href="/login">Log in</a></p>
+                    {% endif %}
+                </div>
             </div>
         </div>
         <div id="main" class="pure-u-1">
@@ -41,13 +50,15 @@
                             {{ subtitle }}
                         </p>
                     </div>
-                    <div class="email-content-controls pure-u-1-2">
-                    {% block buttons %}
-                        <button class="secondary-button pure-button">420</button>
-                        <button class="secondary-button pure-button">Blaze</button>
-                        <button class="secondary-button pure-button">It</button>
-                    {% endblock %}
-                    </div>
+                    {% if auth %}
+                        <div class="email-content-controls pure-u-1-2">
+                        {% block buttons %}
+                            <button class="secondary-button pure-button">420</button>
+                            <button class="secondary-button pure-button">Blaze</button>
+                            <button class="secondary-button pure-button">It</button>
+                        {% endblock %}
+                        </div>
+                    {% endif %}
                 </div>
                 <div class="email-content-body">
                     {% block body %}default body{% endblock %}

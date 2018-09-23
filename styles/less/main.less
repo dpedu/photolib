@@ -22,19 +22,29 @@ a {
     position: relative;
     background: rgb(37, 42, 58);
     text-align: center;
-}
-/* show the "Menu" button on phones */
-#nav .nav-menu-button {
-    display: block;
-    top: 0.5em;
-    right: 0.5em;
-    position: absolute;
+
+    .user-status {
+        padding: 25px 0px;
+        color: #fff;
+
+        span {
+            font-family: monospace;
+        }
+    }
+
+    /* show the "Menu" button on phones */
+    .nav-menu-button {
+        display: block;
+        top: 0.5em;
+        right: 0.5em;
+        position: absolute;
+    }
+    &.active {
+        height: 80%;
+    }
 }
 
 /* when "Menu" is clicked, the navbar should be 80% height */
-#nav.active {
-    height: 80%;
-}
 /* don't show the navigation items until the "Menu" button is clicked */
 .nav-inner {
     display: none;
@@ -45,24 +55,28 @@ a {
 }
 
 
-#nav .pure-menu {
-    background: transparent;
-    border: none;
-    text-align: left;
-}
-    #nav .pure-menu-link:hover,
-    #nav .pure-menu-link:focus {
+#nav {
+    .pure-menu {
+        background: transparent;
+        border: none;
+        text-align: left;
+    }
+
+    .pure-menu-link:hover,
+    .pure-menu-link:focus {
         background: rgb(55, 60, 90);
     }
-    #nav .pure-menu-link {
+    .pure-menu-link {
         color: #fff;
         margin-left: 0.5em;
     }
-    #nav .pure-menu-heading {
+    .pure-menu-heading {
         border-bottom: none;
         font-size:110%;
         color: rgb(75, 113, 151);
     }
+}
+
 
 .tag-icon {
     width: 15px;

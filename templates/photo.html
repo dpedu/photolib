@@ -3,7 +3,13 @@
 {% set subtitle = image.uuid %}
 
 {% block buttons %}
-    xxx
+    <form action="/photo/{{ image.uuid }}/op" method="post">
+        {% if image.status == PhotoStatus.private %}
+            <input type="submit" class="secondary-button pure-button" name="op" value="Make public" />
+        {% else %}
+            <input type="submit" class="secondary-button pure-button" name="op" value="Make private" />
+        {% endif %}
+    </form>
 {% endblock %}
 
 {% block body %}

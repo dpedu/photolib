@@ -3,7 +3,7 @@ import cherrypy
 import logging
 from datetime import datetime, timedelta
 from photoapp.library import PhotoLibrary
-from photoapp.types import Photo, PhotoSet, Tag, TagItem
+from photoapp.types import Photo, PhotoSet, Tag, TagItem, PhotoStatus
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import desc
 from sqlalchemy.exc import IntegrityError
@@ -15,17 +15,43 @@ APPROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
 
 
 def auth():
+    """
+    Return the currently authorized username (per request) or None
+    """
     return cherrypy.session.get('authed', None)
 
 
 def mime2ext(mime):
-        return {"image/png": "png",
-                "image/jpeg": "jpg",
-                "image/gif": "gif",
-                "application/octet-stream-xmp": "xmp",
-                "image/x-canon-cr2": "cr2",
-                "video/mp4": "mp4",
-                "video/quicktime": "mov"}[mime]
+    """
+    Given a mime type return the canonical file extension
+    """
+    return {"image/png": "png",
+            "image/jpeg": "jpg",
+            "image/gif": "gif",
+            "application/octet-stream-xmp": "xmp",
+            "image/x-canon-cr2": "cr2",
+            "video/mp4": "mp4",
+            "video/quicktime": "mov"}[mime]
+
+
+def require_auth(func):
+    """
+    Decorator: raise 403 unless session is authed
+    """
+    def wrapped(*args, **kwargs):
+        if not auth():
+            raise cherrypy.HTTPError(403)
+        return func(*args, **kwargs)
+    return wrapped
+
+
+def photo_auth_filter(query):
+    """
+    Sqlalchemy helper: filter the given PhotoSet query to items that match the authorized user's PhotoStatus access
+    level. Currently, authed users can access ALL photos, and unauthed users can access only PhotoStatus.public
+    status items.
+    """
+    return query.filter(PhotoSet.status == PhotoStatus.public) if not auth() else query
 
 
 class PhotosWeb(object):
@@ -57,11 +83,23 @@ class PhotosWeb(object):
         Return a dict containing variables expected to be on every page
         """
         s = self.session()
+        # all tags / albums with photos visible under the current auth context
+        tagq = s.query(Tag).join(TagItem).join(PhotoSet)
+        if not auth():
+            tagq = tagq.filter(PhotoSet.status == PhotoStatus.public)
+        tagq = tagq.order_by(Tag.title).all()  # pragma: manual auth
+
+        albumq = s.query(Tag).join(TagItem).join(PhotoSet)
+        if not auth():
+            albumq = albumq.filter(PhotoSet.status == PhotoStatus.public)
+        albumq = albumq.filter(Tag.is_album == True).order_by(Tag.title).all()  # pragma: manual auth
+
         ret = {
-            "all_tags": s.query(Tag).order_by(Tag.title).all(),
-            "all_albums": s.query(Tag).filter(Tag.is_album == True).order_by(Tag.title).all(),
+            "all_tags": tagq,
+            "all_albums": albumq,
             "path": cherrypy.request.path_info,
-            "auth": auth()
+            "auth": auth(),
+            "PhotoStatus": PhotoStatus
         }
         s.close()
         return ret
@@ -86,8 +124,9 @@ class PhotosWeb(object):
         """
         s = self.session()
         page, pgsize = int(page), int(pgsize)
-        total_sets = s.query(func.count(PhotoSet.id)).first()[0]
-        images = s.query(PhotoSet).order_by(PhotoSet.date.desc()).offset(pgsize * page).limit(pgsize).all()
+        total_sets = photo_auth_filter(s.query(func.count(PhotoSet.id))).first()[0]
+        images = photo_auth_filter(s.query(PhotoSet)).order_by(PhotoSet.date.desc()). \
+            offset(pgsize * page).limit(pgsize).all()
         yield self.render("feed.html", images=[i for i in images], page=page, pgsize=int(pgsize), total_sets=total_sets)
 
     @cherrypy.expose
@@ -96,11 +135,11 @@ class PhotosWeb(object):
         /stats - show server statistics
         """
         s = self.session()
-        images = s.query(func.count(PhotoSet.uuid),
-                         func.strftime('%Y', PhotoSet.date).label('year'),
-                         func.strftime('%m', PhotoSet.date).label('month')). \
+        images = photo_auth_filter(s.query(func.count(PhotoSet.uuid),
+                                           func.strftime('%Y', PhotoSet.date).label('year'),
+                                           func.strftime('%m', PhotoSet.date).label('month'))). \
             group_by('year', 'month').order_by(desc('year'), desc('month')).all()
-        tsize = s.query(func.sum(Photo.size)).scalar()
+        tsize = photo_auth_filter(s.query(func.sum(Photo.size)).join(PhotoSet)).scalar()  # pragma: manual auth
         yield self.render("monthly.html", images=images, tsize=tsize)
 
     @cherrypy.expose
@@ -110,12 +149,13 @@ class PhotosWeb(object):
         TODO using so many coordinates is slow in the browser. dedupe them somehow.
         """
         s = self.session()
-        query = s.query(PhotoSet).filter(PhotoSet.lat != 0, PhotoSet.lon != 0)
+        query = photo_auth_filter(s.query(PhotoSet)).filter(PhotoSet.lat != 0, PhotoSet.lon != 0)
         if i:
             query = query.filter(PhotoSet.uuid == i)
         yield self.render("map.html", images=query.all(), zoom=int(zoom))
 
     @cherrypy.expose
+    @require_auth
     def create_tags(self, fromdate=None, uuid=None, tag=None, newtag=None, remove=None):
         """
         /create_tags - tag multiple items selected by day of photo
@@ -178,11 +218,12 @@ class PhotosWeb(object):
         raise cherrypy.HTTPRedirect('/feed', 302)
 
     @cherrypy.expose
-    def sess(self):
+    def logout(self):
         """
-        /sess - TODO DELETE ME dump session contents for debugging purposes
+        /login - enable super features by logging into the app
         """
-        yield cherrypy.session['authed']
+        cherrypy.session.clear()
+        raise cherrypy.HTTPRedirect('/feed', 302)
 
 
 @cherrypy.popargs('date')
@@ -201,20 +242,20 @@ class DateView(object):
             pgsize = 100
             dt = datetime.strptime(date, "%Y-%m-%d")
             dt_end = dt + timedelta(days=1)
-            total_sets = s.query(func.count(PhotoSet.id)). \
+            total_sets = photo_auth_filter(s.query(func.count(PhotoSet.id))). \
                 filter(and_(PhotoSet.date >= dt, PhotoSet.date < dt_end)).first()[0]
-            images = s.query(PhotoSet).filter(and_(PhotoSet.date >= dt,
-                                                   PhotoSet.date < dt_end)).order_by(PhotoSet.date). \
+            images = photo_auth_filter(s.query(PhotoSet)).filter(and_(PhotoSet.date >= dt,
+                                                                 PhotoSet.date < dt_end)).order_by(PhotoSet.date). \
                 offset(page * pgsize).limit(pgsize).all()
             yield self.master.render("date.html", page=page, pgsize=pgsize, total_sets=total_sets,
                                      images=[i for i in images], date=dt)
             return
-        images = s.query(PhotoSet, func.strftime('%Y-%m-%d',
-                         PhotoSet.date).label('gdate'),
-                         func.count('photos.id'),
-                         func.strftime('%Y', PhotoSet.date).label('year'),
-                         func.strftime('%m', PhotoSet.date).label('month'),
-                         func.strftime('%d', PhotoSet.date).label('day')). \
+        images = photo_auth_filter(s.query(PhotoSet, func.strftime('%Y-%m-%d',
+                                   PhotoSet.date).label('gdate'),
+                                   func.count('photos.id'),
+                                   func.strftime('%Y', PhotoSet.date).label('year'),
+                                   func.strftime('%m', PhotoSet.date).label('month'),
+                                   func.strftime('%d', PhotoSet.date).label('day'))). \
             group_by('gdate').order_by(desc('year'), 'month', 'day').all()
         yield self.master.render("dates.html", images=images)
 
@@ -233,9 +274,11 @@ class ThumbnailView(object):
         uuid = uuid.split(".")[0]
         s = self.master.session()
 
-        query = s.query(Photo).filter(Photo.set.has(uuid=uuid)) if item_type == "set" \
-            else s.query(Photo).filter(Photo.uuid == uuid) if item_type == "one" \
+        query = photo_auth_filter(s.query(Photo)).filter(Photo.set.has(uuid=uuid)) if item_type == "set" \
+            else photo_auth_filter(s.query(Photo)).filter(Photo.uuid == uuid) if item_type == "one" \
             else None
+
+        assert query
 
         # prefer making thumbs from jpeg to avoid loading large raws
         first = None
@@ -248,7 +291,7 @@ class ThumbnailView(object):
                 break
         thumb_from = best or first
         if not thumb_from:
-            raise Exception("404")  # TODO it right
+            raise Exception("404")
         # TODO some lock around calls to this based on uuid
         thumb_path = self.master.library.make_thumb(thumb_from, thumb_size)
         if thumb_path:
@@ -272,7 +315,7 @@ class DownloadView(object):
         s = self.master.session()
 
         query = None if item_type == "set" \
-            else s.query(Photo).filter(Photo.uuid == uuid) if item_type == "one" \
+            else photo_auth_filter(s.query(Photo)).filter(Photo.uuid == uuid) if item_type == "one" \
             else None  # TODO set download query
 
         item = query.first()
@@ -296,8 +339,20 @@ class PhotoView(object):
     def index(self, uuid):
         uuid = uuid.split(".")[0]
         s = self.master.session()
-        photo = s.query(PhotoSet).filter(PhotoSet.uuid == uuid).first()
+        photo = photo_auth_filter(s.query(PhotoSet)).filter(PhotoSet.uuid == uuid).first()
         yield self.master.render("photo.html", image=photo)
+
+    @cherrypy.expose
+    @require_auth
+    def op(self, uuid, op):
+        s = self.master.session()
+        photo = s.query(PhotoSet).filter(PhotoSet.uuid == uuid).first()
+        if op == "Make public":
+            photo.status = PhotoStatus.public
+        elif op == "Make private":
+            photo.status = PhotoStatus.private
+        s.commit()
+        raise cherrypy.HTTPRedirect('/photo/{}'.format(photo.uuid), 302)
 
 
 @cherrypy.popargs('uuid')
@@ -316,19 +371,22 @@ class TagView(object):
         s = self.master.session()
 
         if uuid == "untagged":
-            numphotos = s.query(func.count(PhotoSet.id)).filter(~PhotoSet.id.in_(s.query(TagItem.set_id))).scalar()
-            photos = s.query(PhotoSet).filter(~PhotoSet.id.in_(s.query(TagItem.set_id))).\
+            numphotos = photo_auth_filter(s.query(func.count(PhotoSet.id))). \
+                filter(~PhotoSet.id.in_(s.query(TagItem.set_id))).scalar()
+            photos = photo_auth_filter(s.query(PhotoSet)).filter(~PhotoSet.id.in_(s.query(TagItem.set_id))).\
                 offset(page * pgsize).limit(pgsize).all()
             yield self.master.render("untagged.html", images=photos, total_items=numphotos, pgsize=pgsize, page=page)
         else:
             tag = s.query(Tag).filter(Tag.uuid == uuid).first()
-            numphotos = s.query(func.count(Tag.id)).join(TagItem).join(PhotoSet).filter(Tag.uuid == uuid).scalar()
-            photos = s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.uuid == uuid). \
+            numphotos = photo_auth_filter(s.query(func.count(Tag.id)).join(TagItem).join(PhotoSet)). \
+                filter(Tag.uuid == uuid).scalar()
+            photos = photo_auth_filter(s.query(PhotoSet)).join(TagItem).join(Tag).filter(Tag.uuid == uuid). \
                 order_by(PhotoSet.date.desc()).offset(page * pgsize).limit(pgsize).all()
             yield self.master.render("album.html", tag=tag, images=photos,
                                      total_items=numphotos, pgsize=pgsize, page=page)
 
     @cherrypy.expose
+    @require_auth
     def op(self, uuid, op):
         s = self.master.session()
         tag = s.query(Tag).filter(Tag.uuid == uuid).first()
