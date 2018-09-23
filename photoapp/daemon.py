@@ -283,8 +283,10 @@ class ThumbnailView(object):
         uuid = uuid.split(".")[0]
         s = self.master.session()
 
-        query = photo_auth_filter(s.query(Photo)).filter(Photo.set.has(uuid=uuid)) if item_type == "set" \
-            else photo_auth_filter(s.query(Photo)).filter(Photo.uuid == uuid) if item_type == "one" \
+        query = photo_auth_filter(s.query(Photo).join(PhotoSet))
+
+        query = query.filter(Photo.set.has(uuid=uuid)) if item_type == "set" \
+            else query.filter(Photo.uuid == uuid) if item_type == "one" \
             else None
 
         assert query
@@ -299,8 +301,9 @@ class ThumbnailView(object):
                 best = photo
                 break
         thumb_from = best or first
+        print(repr(thumb_from))
         if not thumb_from:
-            raise Exception("404")
+            raise cherrypy.HTTPError(404)
         # TODO some lock around calls to this based on uuid
         thumb_path = self.master.library.make_thumb(thumb_from, thumb_size)
         if thumb_path:
@@ -328,6 +331,8 @@ class DownloadView(object):
             else None  # TODO set download query
 
         item = query.first()
+        if not item:
+            raise cherrypy.HTTPError(404)
         extra = {}
         if not preview:
             extra.update(disposition="attachement", name=os.path.basename(item.path))
