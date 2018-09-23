@@ -87,7 +87,7 @@ class PhotosWeb(object):
         tagq = s.query(Tag).join(TagItem).join(PhotoSet)
         if not auth():
             tagq = tagq.filter(PhotoSet.status == PhotoStatus.public)
-        tagq = tagq.order_by(Tag.title).all()  # pragma: manual auth
+        tagq = tagq.filter(Tag.is_album == False).order_by(Tag.title).all()  # pragma: manual auth
 
         albumq = s.query(Tag).join(TagItem).join(PhotoSet)
         if not auth():
@@ -388,6 +388,14 @@ class TagView(object):
     @cherrypy.expose
     @require_auth
     def op(self, uuid, op):
+        """
+        Perform some action on this tag
+        - Promote: label this tag an album
+        - Demote: label this tag as only a tag and not an album
+        - Delete: remove this tag
+        - Make all public: mark all photos under this tag as public
+        - Make all private: mark all photos under this tag as private
+        """
         s = self.master.session()
         tag = s.query(Tag).filter(Tag.uuid == uuid).first()
         if op == "Demote to tag":
@@ -399,6 +407,14 @@ class TagView(object):
             s.delete(tag)
             s.commit()
             raise cherrypy.HTTPRedirect('/', 302)
+        elif op == "Make all public":
+            # TODO smarter query
+            for photo in s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.uuid == uuid).all():
+                photo.status = PhotoStatus.public
+        elif op == "Make all private":
+            # TODO smarter query
+            for photo in s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.uuid == uuid).all():
+                photo.status = PhotoStatus.private
         else:
             raise Exception("Invalid op: '{}'".format(op))
         s.commit()

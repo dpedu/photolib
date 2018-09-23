@@ -6,6 +6,8 @@
     <form action="/tag/{{ tag.uuid }}/op" method="post">
         {% if tag.is_album %}<input type="submit" class="secondary-button pure-button" name="op" value="Demote to tag" />{% else %}
         <input type="submit" class="secondary-button pure-button" name="op" value="Promote to album" />{% endif %}
+        <input type="submit" class="secondary-button pure-button" name="op" value="Make all public" />
+        <input type="submit" class="secondary-button pure-button" name="op" value="Make all private" />
         <input type="submit" class="secondary-button pure-button" name="op" value="Delete tag" />
     </form>
 {% endblock %}

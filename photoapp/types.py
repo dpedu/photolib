@@ -61,7 +61,7 @@ class Tag(Base):
     uuid = Column(Unicode, unique=True, default=lambda: str(uuid.uuid4()))
     created = Column(DateTime, default=lambda: datetime.now())
     modified = Column(DateTime, default=lambda: datetime.now())
-    is_album = Column(Boolean)
+    is_album = Column(Boolean, default=False)
     title = Column(String, unique=True)
     slug = Column(String, unique=True)
     description = Column(String)
