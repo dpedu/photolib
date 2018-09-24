@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block title %}Editing {{ image.uuid }}{% endblock %}
+{% block title %}Editing {{ image.title or image.uuid }}{% endblock %}
 {% block subtitle %}{{ image.date }}{% endblock %}
 
 {% block buttons %}

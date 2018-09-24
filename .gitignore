@@ -11,3 +11,7 @@ styles/css/
 styles/dist/
 styles/mincss/
 testenv/
+cache
+dropbox
+library
+tools/

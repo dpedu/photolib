@@ -10,6 +10,8 @@
         <input type="submit" class="secondary-button pure-button" name="op" value="Make all private" />
         <input type="submit" class="secondary-button pure-button" name="op" value="Delete tag" />
     </form>
+    <a href="/map?zoom=6&a={{ tag.uuid }}"><button class="secondary-button pure-button">Map</button></a>
+    <a href="/tag/{{ tag.uuid }}/edit"><button class="secondary-button pure-button">Edit</button></a>
 {% endblock %}
 
 {% block body %}

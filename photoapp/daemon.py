@@ -148,13 +148,16 @@ class PhotosWeb(object):
         yield self.render("monthly.html", images=images, tsize=tsize)
 
     @cherrypy.expose
-    def map(self, i=None, zoom=3):
+    def map(self, i=None, a=None, zoom=3):
         """
-        /map - show all photos on the a map, or a single point if $i is passed
+        /map - show all photos on the a map. Passing $i will show a single photo, or passing $a will show photos under
+            the given tag.
         TODO using so many coordinates is slow in the browser. dedupe them somehow.
         """
         s = self.session()
         query = photo_auth_filter(s.query(PhotoSet)).filter(PhotoSet.lat != 0, PhotoSet.lon != 0)
+        if a:
+            query = query.join(TagItem).join(Tag).filter(Tag.uuid == a)
         if i:
             query = query.filter(PhotoSet.uuid == i)
         yield self.render("map.html", images=query.all(), zoom=int(zoom))
@@ -277,7 +280,6 @@ class ThumbnailView(object):
     """
     def __init__(self, master):
         self.master = master
-        self._cp_config = {"tools.trailing_slash.on": False}
 
     @cherrypy.expose
     def index(self, item_type, thumb_size, uuid):
@@ -293,6 +295,7 @@ class ThumbnailView(object):
         assert query
 
         # prefer making thumbs from jpeg to avoid loading large raws
+        # jk we can't load raws anyway
         first = None
         best = None
         for photo in query.all():
@@ -320,7 +323,6 @@ class DownloadView(object):
     """
     def __init__(self, master):
         self.master = master
-        self._cp_config = {"tools.trailing_slash.on": False}
 
     @cherrypy.expose
     def index(self, item_type, uuid, preview=False):
@@ -348,7 +350,6 @@ class PhotoView(object):
     """
     def __init__(self, master):
         self.master = master
-        self._cp_config = {"tools.trailing_slash.on": False}
 
     @cherrypy.expose
     def index(self, uuid):
@@ -398,7 +399,6 @@ class TagView(object):
     """
     def __init__(self, master):
         self.master = master
-        # self._cp_config = {"tools.trailing_slash.on": False}
 
     @cherrypy.expose
     def index(self, uuid, page=0):
@@ -427,7 +427,7 @@ class TagView(object):
 
     @cherrypy.expose
     @require_auth
-    def op(self, uuid, op):
+    def op(self, uuid, op, title=None, description=None):
         """
         Perform some action on this tag
         - Promote: label this tag an album
@@ -455,10 +455,21 @@ class TagView(object):
             # TODO smarter query
             for photo in s.query(PhotoSet).join(TagItem).join(Tag).filter(Tag.id == tag.id).all():
                 photo.status = PhotoStatus.private
+        elif op == "Save":
+            tag.title = title
+            tag.description = description
+            tag.slug = slugify(title)
         else:
             raise Exception("Invalid op: '{}'".format(op))
         s.commit()
-        raise cherrypy.HTTPRedirect('/tag/{}'.format(tag.uuid), 302)
+        raise cherrypy.HTTPRedirect('/tag/{}'.format(tag.slug or tag.uuid), 302)
+
+    @cherrypy.expose
+    @require_auth
+    def edit(self, uuid):
+        s = self.master.session()
+        tag = s.query(Tag).filter(Tag.uuid == uuid).first()
+        yield self.master.render("tag_edit.html", tag=tag)
 
 
 def main():
@@ -483,8 +494,6 @@ def main():
     tpl_dir = os.path.join(APPROOT, "templates") if not args.debug else "templates"
 
     web = PhotosWeb(library, tpl_dir)
-    web_config = {'error_page.403': web.error,
-                  'error_page.404': web.error}
 
     def validate_password(realm, username, password):
         s = library.session()
@@ -492,7 +501,9 @@ def main():
             return True
         return False
 
-    cherrypy.tree.mount(web, '/', {'/': web_config,
+    cherrypy.tree.mount(web, '/', {'/': {'tools.trailing_slash.on': False,
+                                         'error_page.403': web.error,
+                                         'error_page.404': web.error},
                                    '/static': {"tools.staticdir.on": True,
                                                "tools.staticdir.dir": os.path.join(APPROOT, "styles/dist")
                                                if not args.debug else os.path.abspath("styles/dist")},
