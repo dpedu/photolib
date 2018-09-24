@@ -1,0 +1,27 @@
+{% extends "page.html" %}
+{% block title %}Editing {{ tag.uuid }}{% endblock %}
+{% block subtitle %}{% endblock %}
+
+{% block buttons %}
+    <a href="/tag/{{ tag.slug or tag.uuid }}"><button class="secondary-button pure-button">Back</button></a>
+{% endblock %}
+
+{% block body %}
+
+<div class="photo-view pure-g">
+    <div class="photo-form pure-u-2-3">
+        <form action="/tag/{{ tag.uuid }}/op" method="post" class="pure-form pure-form-stacked">
+            <fieldset>
+                <fieldset class="pure-group pure-u-1">
+                    <input name="title" type="text" class="pure-input-1" placeholder="Image title" value="{{ tag.title or "" }}" />
+                    <textarea name="description" class="pure-input-1" placeholder="Description" rows="15">{{ tag.description or "" }}</textarea>
+                </fieldset>
+                <div class="pure-u-1">
+                    <input type="submit" class="pure-button pure-button-primary" name="op" value="Save" />
+                </div>
+            </fieldset>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
